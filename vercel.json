@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/prozorro/:path*",
+      "destination": "https://public-api.prozorro.gov.ua/:path*"
+    }
+  ]
+}
