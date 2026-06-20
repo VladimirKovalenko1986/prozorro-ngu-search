@@ -79,13 +79,7 @@ function App() {
 
         setResults([...found]);
 
-        url = json.next_page?.uri
-          ? json.next_page.uri.replace(
-              "https://public-api.prozorro.gov.ua",
-              "/prozorro",
-            )
-          : "";
-      }
+        url = json.next_page?.path ? `/prozorro${json.next_page.path}` : "";
 
       setStatus(
         `Готово. Знайдено: ${found.length} за період ${dateFrom} — ${dateTo}`,
