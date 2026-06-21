@@ -9,17 +9,36 @@ import {
 } from "../../services/prozorroApi.js";
 import "./App.css";
 
-const DEFAULT_EDRPOU = "08803498";
+const BUYERS = [
+  {
+    label: "ГУ НГУ",
+    edrpou: "08803498",
+  },
+  {
+    label: "НГУ",
+    edrpou: "",
+  },
+];
 
 export default function App() {
-  const [edrpou, setEdrpou] = useState(DEFAULT_EDRPOU);
+  const [selectedBuyer, setSelectedBuyer] = useState(BUYERS[0].label);
   const [dateFrom, setDateFrom] = useState("2026-05-01");
   const [dateTo, setDateTo] = useState("2026-06-20");
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("Готово до пошуку");
   const [isLoading, setIsLoading] = useState(false);
 
+  const selectedBuyerData = BUYERS.find(
+    (buyer) => buyer.label === selectedBuyer,
+  );
+  const edrpou = selectedBuyerData?.edrpou || "";
+
   async function searchTenders() {
+    if (!edrpou) {
+      setStatus("Для цього замовника ще не вказано ЄДРПОУ");
+      return;
+    }
+
     setIsLoading(true);
     setResults([]);
     setStatus("Шукаю закупівлі...");
@@ -69,6 +88,7 @@ export default function App() {
 
           const quantity =
             contractDetails?.items?.[0]?.quantity || itemInfo?.quantity;
+
           const contractAmount =
             contractDetails?.value?.amount || contract?.value?.amount;
 
@@ -137,11 +157,12 @@ export default function App() {
   return (
     <main className="page">
       <SearchPanel
-        edrpou={edrpou}
+        buyers={BUYERS}
+        selectedBuyer={selectedBuyer}
         dateFrom={dateFrom}
         dateTo={dateTo}
         isLoading={isLoading}
-        onChangeEdrpou={setEdrpou}
+        onChangeBuyer={setSelectedBuyer}
         onChangeDateFrom={setDateFrom}
         onChangeDateTo={setDateTo}
         onSearch={searchTenders}

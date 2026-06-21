@@ -1,9 +1,10 @@
 export default function SearchPanel({
-  edrpou,
+  buyers,
+  selectedBuyer,
   dateFrom,
   dateTo,
   isLoading,
-  onChangeEdrpou,
+  onChangeBuyer,
   onChangeDateFrom,
   onChangeDateTo,
   onSearch,
@@ -14,11 +15,17 @@ export default function SearchPanel({
 
       <div className="controls">
         <label>
-          ЄДРПОУ замовника
-          <input
-            value={edrpou}
-            onChange={(event) => onChangeEdrpou(event.target.value)}
-          />
+          Замовник
+          <select
+            value={selectedBuyer}
+            onChange={(event) => onChangeBuyer(event.target.value)}
+          >
+            {buyers.map((buyer) => (
+              <option key={buyer.label} value={buyer.label}>
+                {buyer.label}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label>

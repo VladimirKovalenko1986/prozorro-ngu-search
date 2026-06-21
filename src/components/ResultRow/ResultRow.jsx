@@ -6,7 +6,6 @@ export default function ResultRow({ item }) {
     <tr>
       <td>
         <strong>{item.title}</strong>
-        <span>{item.buyer}</span>
       </td>
 
       <td>
