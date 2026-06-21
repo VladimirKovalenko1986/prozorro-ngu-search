@@ -3,6 +3,7 @@ import SearchPanel from "../SearchPanel/SearchPanel.jsx";
 import StatusMessage from "../StatusMessage/StatusMessage.jsx";
 import ResultsTable from "../ResultsTable/ResultsTable.jsx";
 import {
+  fetchContractDetails,
   fetchTenderDetails,
   fetchTendersPage,
 } from "../../services/prozorroApi.js";
@@ -52,22 +53,74 @@ export default function App() {
 
         for (const item of matches) {
           const details = await fetchTenderDetails(item.id);
+
+          const itemInfo = details.items?.[0];
           const contract = details.contracts?.[0];
+          const contractDetails = await fetchContractDetails(contract?.id);
+
+          const award = details.awards?.find(
+            (award) => award.id === contract?.awardID,
+          );
+
+          const supplier =
+            contractDetails?.suppliers?.[0] ||
+            contract?.suppliers?.[0] ||
+            award?.suppliers?.[0];
+
+          const quantity =
+            contractDetails?.items?.[0]?.quantity || itemInfo?.quantity;
+          const contractAmount =
+            contractDetails?.value?.amount || contract?.value?.amount;
 
           found.push({
             id: item.id,
             tenderID: details.tenderID,
             buyer: details.procuringEntity?.name,
-            title: contract?.title || details.title,
-            contractID: contract?.contractID || "Немає договору",
-            amount: contract?.value?.amount,
-            currency: contract?.value?.currency || "UAH",
-            contractStatus: contract?.status || "Немає статусу",
+            title: contractDetails?.title || contract?.title || details.title,
+
+            quantity,
+            unitName:
+              contractDetails?.items?.[0]?.unit?.name ||
+              itemInfo?.unit?.name ||
+              "",
+
+            expectedAmount: details.value?.amount,
+            expectedCurrency: details.value?.currency || "UAH",
+
+            contractAmount,
+            contractCurrency:
+              contractDetails?.value?.currency ||
+              contract?.value?.currency ||
+              "UAH",
+
+            unitPrice:
+              contractAmount && quantity ? contractAmount / quantity : null,
+
+            contractNumber:
+              contractDetails?.contractNumber ||
+              contractDetails?.number ||
+              contract?.contractNumber ||
+              contract?.number ||
+              "Немає номера договору",
+
+            dateSigned:
+              contractDetails?.dateSigned ||
+              contractDetails?.date ||
+              contract?.dateSigned ||
+              contract?.date ||
+              "Немає дати",
+
+            supplierName: supplier?.name || "Немає контрагента",
+
+            contractStatus:
+              contractDetails?.status || contract?.status || "Немає статусу",
+
             tenderStatus: details.status,
           });
         }
 
         setResults([...found]);
+
         url = json.next_page?.path ? "/prozorro" + json.next_page.path : "";
       }
 

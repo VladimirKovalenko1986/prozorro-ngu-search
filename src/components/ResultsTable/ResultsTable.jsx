@@ -10,8 +10,13 @@ export default function ResultsTable({ results }) {
           <thead>
             <tr>
               <th>Предмет закупівлі</th>
+              <th>Кількість</th>
+              <th>Контрагент</th>
+              <th>Очікувана вартість</th>
               <th>Ціна договору</th>
+              <th>Ціна за одиницю</th>
               <th>Номер договору</th>
+              <th>Дата укладання</th>
               <th>Тендер</th>
               <th>Статус</th>
             </tr>

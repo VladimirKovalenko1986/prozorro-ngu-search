@@ -18,3 +18,16 @@ export async function fetchTenderDetails(id) {
   const json = await response.json();
   return json.data;
 }
+
+export async function fetchContractDetails(id) {
+  if (!id) return null;
+
+  const response = await fetch(`/prozorro/api/0/contracts/${id}`);
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const json = await response.json();
+  return json.data;
+}
