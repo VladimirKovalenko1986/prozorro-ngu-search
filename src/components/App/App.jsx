@@ -2,6 +2,7 @@ import { useState } from "react";
 import SearchPanel from "../SearchPanel/SearchPanel.jsx";
 import StatusMessage from "../StatusMessage/StatusMessage.jsx";
 import ResultsTable from "../ResultsTable/ResultsTable.jsx";
+import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import {
   fetchContractDetails,
   fetchTenderDetails,
@@ -156,6 +157,7 @@ export default function App() {
 
   return (
     <main className="page">
+      <ScrollToSearchButton />
       <SearchPanel
         buyers={BUYERS}
         selectedBuyer={selectedBuyer}

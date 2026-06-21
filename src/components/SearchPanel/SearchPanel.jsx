@@ -10,7 +10,7 @@ export default function SearchPanel({
   onSearch,
 }) {
   return (
-    <section className="panel">
+    <section className="panel" id="search-panel">
       <h1>Пошук договорів Prozorro</h1>
 
       <div className="controls">
