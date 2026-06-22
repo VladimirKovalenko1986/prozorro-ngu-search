@@ -1,24 +1,24 @@
-export default function SearchPanel({
+function SearchPanel({
   buyers,
   selectedBuyer,
   dateFrom,
   dateTo,
-  isLoading,
-  onChangeBuyer,
-  onChangeDateFrom,
-  onChangeDateTo,
+  loading,
+  onBuyerChange,
+  onDateFromChange,
+  onDateToChange,
   onSearch,
 }) {
   return (
     <section className="panel" id="search-panel">
       <h1>Пошук договорів Prozorro</h1>
 
-      <div className="controls">
+      <form className="controls" onSubmit={onSearch}>
         <label>
           Замовник
           <select
             value={selectedBuyer}
-            onChange={(event) => onChangeBuyer(event.target.value)}
+            onChange={(event) => onBuyerChange(event.target.value)}
           >
             {buyers.map((buyer) => (
               <option key={buyer.label} value={buyer.label}>
@@ -33,7 +33,7 @@ export default function SearchPanel({
           <input
             type="date"
             value={dateFrom}
-            onChange={(event) => onChangeDateFrom(event.target.value)}
+            onChange={(event) => onDateFromChange(event.target.value)}
           />
         </label>
 
@@ -42,14 +42,16 @@ export default function SearchPanel({
           <input
             type="date"
             value={dateTo}
-            onChange={(event) => onChangeDateTo(event.target.value)}
+            onChange={(event) => onDateToChange(event.target.value)}
           />
         </label>
 
-        <button onClick={onSearch} disabled={isLoading}>
-          {isLoading ? "Шукаю..." : "Шукати"}
+        <button type="submit" disabled={loading}>
+          {loading ? "Шукаю..." : "Шукати"}
         </button>
-      </div>
+      </form>
     </section>
   );
 }
+
+export default SearchPanel;

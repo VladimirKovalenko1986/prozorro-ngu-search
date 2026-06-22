@@ -112,7 +112,7 @@ button:disabled {
 
 table {
   width: 100%;
-  min-width: 900px;
+  min-width: 1420px;
   border-collapse: collapse;
 }
 
@@ -134,6 +134,28 @@ td span {
   display: block;
   margin-top: 6px;
   color: #667788;
+}
+
+.procedure-cell {
+  width: 320px;
+  background: #fbfcfd;
+}
+
+.procedure-cell a {
+  display: block;
+  margin-top: 10px;
+}
+
+.table-panel {
+  background: white;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.empty-panel {
+  padding: 24px;
+  color: #53616f;
 }
 
 a {

@@ -1,177 +1,466 @@
 import { useState } from "react";
-import SearchPanel from "../SearchPanel/SearchPanel.jsx";
-import StatusMessage from "../StatusMessage/StatusMessage.jsx";
-import ResultsTable from "../ResultsTable/ResultsTable.jsx";
-import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import {
   fetchContractDetails,
+  fetchTenderSearchPage,
   fetchTenderDetails,
-  fetchTendersPage,
+  fetchTenderSummary,
 } from "../../services/prozorroApi.js";
+import { formatDate } from "../../utils/formatDate.js";
+import { formatMoney } from "../../utils/formatMoney.js";
 import "./App.css";
 
 const BUYERS = [
-  {
-    label: "ГУ НГУ",
-    edrpou: "08803498",
-  },
-  {
-    label: "НГУ",
-    edrpou: "",
-  },
+  { label: "ГУ НГУ", edrpou: "08803498" },
+  { label: "НГУ", edrpou: "" },
 ];
 
-export default function App() {
+const MAX_SEARCH_PAGES = 100;
+const TENDER_REQUEST_DELAY_MS = 700;
+
+const STATUS_LABELS = {
+  active: "Активний",
+  complete: "Завершений",
+  unsuccessful: "Не відбувся",
+  cancelled: "Скасований",
+  pending: "В процесі",
+  pending_payment: "Очікує оплату",
+};
+
+function statusLabel(status) {
+  return STATUS_LABELS[status] || status || "Немає статусу";
+}
+
+function getRelatedLotId(entity) {
+  return entity?.lotID || entity?.relatedLot || entity?.relatedItem || null;
+}
+
+function findAwardForLot(details, lot) {
+  if (!lot) return details.awards?.[0];
+
+  return details.awards?.find((award) => getRelatedLotId(award) === lot.id);
+}
+
+function findContractForLot(details, lot, award) {
+  if (!details.contracts?.length) return null;
+
+  return (
+    details.contracts.find(
+      (contract) => lot?.id && getRelatedLotId(contract) === lot.id,
+    ) ||
+    details.contracts.find((contract) => contract.awardID === award?.id) ||
+    details.contracts[0]
+  );
+}
+
+function getLotItems(details, lot) {
+  if (!details.items?.length) return [];
+  if (!lot) return details.items;
+
+  return details.items.filter((item) => item.relatedLot === lot.id);
+}
+
+function getTotalQuantity(items = []) {
+  return items.reduce((total, item) => total + Number(item.quantity || 0), 0);
+}
+
+function getUnitName(items = []) {
+  const units = items.map((item) => item.unit?.name).filter(Boolean);
+  const uniqueUnits = [...new Set(units)];
+
+  if (uniqueUnits.length === 1) return uniqueUnits[0];
+  if (uniqueUnits.length > 1) return "різні одиниці";
+
+  return "";
+}
+
+function getProcedureTitle(details) {
+  return details.title || "Без назви";
+}
+
+function getLotTitle(lot, lotItems, contractDetails, contract) {
+  return (
+    lot?.title ||
+    lotItems?.[0]?.description ||
+    contractDetails?.title ||
+    contract?.title ||
+    "Без назви"
+  );
+}
+
+function getLotExpectedValue(details, lot) {
+  return {
+    amount: lot?.value?.amount || details.value?.amount || null,
+    currency: lot?.value?.currency || details.value?.currency || "UAH",
+  };
+}
+
+function getContractValue(contractDetails, contract) {
+  return {
+    amount: contractDetails?.value?.amount || contract?.value?.amount || null,
+    currency:
+      contractDetails?.value?.currency || contract?.value?.currency || "UAH",
+  };
+}
+
+function getContractDate(contractDetails, contract) {
+  return (
+    contractDetails?.dateCreated ||
+    contractDetails?.date ||
+    contract?.dateCreated ||
+    contract?.date ||
+    null
+  );
+}
+
+function getContractSignedDate(contractDetails, contract) {
+  return contractDetails?.dateSigned || contract?.dateSigned || null;
+}
+
+function getContractNumber(contractDetails, contract) {
+  return (
+    contractDetails?.contractNumber ||
+    contractDetails?.number ||
+    contract?.contractNumber ||
+    contract?.number ||
+    "Немає номера договору"
+  );
+}
+
+function getSupplier(contractDetails, contract, award) {
+  return (
+    contractDetails?.suppliers?.[0] ||
+    contract?.suppliers?.[0] ||
+    award?.suppliers?.[0] ||
+    null
+  );
+}
+
+function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
+  const lotItems = getLotItems(details, lot);
+  const award = findAwardForLot(details, lot);
+  const contract = findContractForLot(details, lot, award);
+  const contractItems = contractDetails?.items?.length
+    ? contractDetails.items
+    : lotItems;
+  const quantity = getTotalQuantity(contractItems);
+  const expected = getLotExpectedValue(details, lot);
+  const contractValue = getContractValue(contractDetails, contract);
+  const supplier = getSupplier(contractDetails, contract, award);
+
+  return {
+    id: `${details.id}-${lot?.id || contract?.id || lotIndex}`,
+    lotNumber: lot && lotsCount > 1 ? lotIndex + 1 : null,
+    lotTitle:
+      lot && lotsCount > 1
+        ? getLotTitle(lot, lotItems, contractDetails, contract)
+        : "",
+    quantity: quantity || null,
+    unitName: getUnitName(contractItems),
+    supplierName: supplier?.name || "Немає контрагента",
+    expectedAmount: expected.amount,
+    expectedCurrency: expected.currency,
+    contractAmount: contractValue.amount,
+    contractCurrency: contractValue.currency,
+    unitPrice:
+      contractValue.amount && quantity ? contractValue.amount / quantity : null,
+    contractNumber: getContractNumber(contractDetails, contract),
+    contractDate: getContractDate(contractDetails, contract),
+    dateSigned: getContractSignedDate(contractDetails, contract),
+    contractStatus: statusLabel(contractDetails?.status || contract?.status),
+    awardStatus: statusLabel(award?.status),
+  };
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildFallbackDetails(searchItem) {
+  return {
+    id: searchItem.tenderID,
+    tenderID: searchItem.tenderID,
+    title: searchItem.title,
+    status: searchItem.status,
+    value: searchItem.value,
+    dateCreated:
+      searchItem.tenderPeriod?.startDate || searchItem.dateCreated || null,
+    tenderPeriod: searchItem.tenderPeriod || {},
+    items: [],
+    lots: [],
+    awards: [],
+    contracts: [],
+  };
+}
+
+async function fetchFullTenderDetails(searchItem) {
+  let summary;
+
+  try {
+    summary = await fetchTenderSummary(searchItem.tenderID);
+  } catch {
+    return buildFallbackDetails(searchItem);
+  }
+
+  try {
+    return await fetchTenderDetails(summary.id);
+  } catch {
+    return {
+      ...summary,
+      dateCreated:
+        summary.tenderPeriod?.startDate || searchItem.tenderPeriod?.startDate,
+      items: [],
+      lots: [],
+      awards: [],
+      contracts: [],
+    };
+  }
+}
+
+function buildProcedureResult(details, item, lotRows) {
+  return {
+    id: details.id || item.id,
+    tenderID: details.tenderID || item.tenderID,
+    title: getProcedureTitle(details),
+    procedureDate: details.dateCreated || item.dateCreated,
+    tenderStatus: statusLabel(details.status || item.status),
+    rows: lotRows,
+  };
+}
+
+function App() {
   const [selectedBuyer, setSelectedBuyer] = useState(BUYERS[0].label);
   const [dateFrom, setDateFrom] = useState("2026-05-01");
   const [dateTo, setDateTo] = useState("2026-06-20");
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("Готово до пошуку");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const selectedBuyerData = BUYERS.find(
-    (buyer) => buyer.label === selectedBuyer,
-  );
-  const edrpou = selectedBuyerData?.edrpou || "";
+  async function handleSearch(event) {
+    event.preventDefault();
 
-  async function searchTenders() {
-    if (!edrpou) {
-      setStatus("Для цього замовника ще не вказано ЄДРПОУ");
+    const buyer = BUYERS.find((item) => item.label === selectedBuyer);
+
+    if (!buyer?.edrpou) {
+      setStatus("Для цього замовника ще не додано ЄДРПОУ");
+      setResults([]);
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
     setResults([]);
-    setStatus("Шукаю закупівлі...");
-
-    const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
-    const to = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
-
-    let url =
-      "/prozorro/api/0/tenders?descending=1&limit=1000&opt_fields=id,tenderID,status,dateCreated,procuringEntity";
 
     const found = [];
-    let pagesChecked = 0;
-    const maxPages = 200;
+    let page = 1;
+    let total = 0;
+    let totalPages = 1;
 
     try {
-      while (url && pagesChecked < maxPages) {
-        pagesChecked += 1;
-        setStatus(`Перевіряю сторінку ${pagesChecked} з ${maxPages}`);
-
-        const json = await fetchTendersPage(url);
-
-        const matches = json.data.filter((item) => {
-          const buyerMatches = item.procuringEntity?.identifier?.id === edrpou;
-          const createdAt = new Date(item.dateCreated);
-
-          const afterFrom = from ? createdAt >= from : true;
-          const beforeTo = to ? createdAt <= to : true;
-
-          return buyerMatches && afterFrom && beforeTo;
+      while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
+        const json = await fetchTenderSearchPage({
+          edrpou: buyer.edrpou,
+          dateFrom,
+          dateTo,
+          page,
         });
+        const rows = json.data || [];
 
-        for (const item of matches) {
-          const details = await fetchTenderDetails(item.id);
+        total = json.total || rows.length;
+        totalPages = Math.max(1, Math.ceil(total / (json.per_page || 20)));
 
-          const itemInfo = details.items?.[0];
-          const contract = details.contracts?.[0];
-          const contractDetails = await fetchContractDetails(contract?.id);
+        setStatus(
+          `Перевіряю сторінку ${page} з ${totalPages}. Знайдено процедур у пошуку: ${total}`,
+        );
 
-          const award = details.awards?.find(
-            (award) => award.id === contract?.awardID,
+        for (const [itemIndex, item] of rows.entries()) {
+          setStatus(
+            `Сторінка ${page} з ${totalPages}. Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Уже показано: ${found.length} з ${total}`,
           );
 
-          const supplier =
-            contractDetails?.suppliers?.[0] ||
-            contract?.suppliers?.[0] ||
-            award?.suppliers?.[0];
+          const details = await fetchFullTenderDetails(item);
+          const lots = details.lots?.length ? details.lots : [null];
+          const lotRows = [];
 
-          const quantity =
-            contractDetails?.items?.[0]?.quantity || itemInfo?.quantity;
+          for (const [lotIndex, lot] of lots.entries()) {
+            const award = findAwardForLot(details, lot);
+            const contract = findContractForLot(details, lot, award);
+            const contractDetails = await fetchContractDetails(contract?.id);
 
-          const contractAmount =
-            contractDetails?.value?.amount || contract?.value?.amount;
+            lotRows.push(
+              buildLotRow(
+                details,
+                lot,
+                lotIndex,
+                lots.length,
+                contractDetails,
+              ),
+            );
+          }
 
-          found.push({
-            id: item.id,
-            tenderID: details.tenderID,
-            buyer: details.procuringEntity?.name,
-            title: contractDetails?.title || contract?.title || details.title,
+          found.push(buildProcedureResult(details, item, lotRows));
+          setResults([...found]);
 
-            quantity,
-            unitName:
-              contractDetails?.items?.[0]?.unit?.name ||
-              itemInfo?.unit?.name ||
-              "",
-
-            expectedAmount: details.value?.amount,
-            expectedCurrency: details.value?.currency || "UAH",
-
-            contractAmount,
-            contractCurrency:
-              contractDetails?.value?.currency ||
-              contract?.value?.currency ||
-              "UAH",
-
-            unitPrice:
-              contractAmount && quantity ? contractAmount / quantity : null,
-
-            contractNumber:
-              contractDetails?.contractNumber ||
-              contractDetails?.number ||
-              contract?.contractNumber ||
-              contract?.number ||
-              "Немає номера договору",
-
-            dateSigned:
-              contractDetails?.dateSigned ||
-              contractDetails?.date ||
-              contract?.dateSigned ||
-              contract?.date ||
-              "Немає дати",
-
-            supplierName: supplier?.name || "Немає контрагента",
-
-            contractStatus:
-              contractDetails?.status || contract?.status || "Немає статусу",
-
-            tenderStatus: details.status,
-          });
+          await wait(TENDER_REQUEST_DELAY_MS);
         }
 
-        setResults([...found]);
-
-        url = json.next_page?.path ? "/prozorro" + json.next_page.path : "";
+        page += 1;
       }
 
       setStatus(
-        `Готово. Знайдено: ${found.length} за період ${dateFrom} — ${dateTo}`,
+        `Готово. Знайдено процедур: ${found.length} з ${total} за період ${dateFrom} - ${dateTo}`,
       );
     } catch (error) {
       setStatus(`Помилка: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }
 
   return (
     <main className="page">
-      <ScrollToSearchButton />
-      <SearchPanel
-        buyers={BUYERS}
-        selectedBuyer={selectedBuyer}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        isLoading={isLoading}
-        onChangeBuyer={setSelectedBuyer}
-        onChangeDateFrom={setDateFrom}
-        onChangeDateTo={setDateTo}
-        onSearch={searchTenders}
-      />
+      <section className="panel" id="search-panel">
+        <h1>Пошук договорів Prozorro</h1>
 
-      <StatusMessage status={status} />
-      <ResultsTable results={results} />
+        <form className="controls" onSubmit={handleSearch}>
+          <label>
+            Замовник
+            <select
+              value={selectedBuyer}
+              onChange={(event) => setSelectedBuyer(event.target.value)}
+            >
+              {BUYERS.map((buyer) => (
+                <option key={buyer.label} value={buyer.label}>
+                  {buyer.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            З дати
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
+          </label>
+
+          <label>
+            По дату
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+            />
+          </label>
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Шукаю..." : "Шукати"}
+          </button>
+        </form>
+
+        <p className="status">{status}</p>
+      </section>
+
+      {results.length === 0 ? (
+        <section className="table-panel empty-panel">
+          Поки немає результатів.
+        </section>
+      ) : (
+        <section className="table-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Предмет закупівлі</th>
+                <th>Лоти</th>
+                <th>Очікувана / початкова вартість</th>
+                <th>Дата договору</th>
+                <th>Сума договору</th>
+                <th>Ціна за одиницю</th>
+                <th>Контрагент</th>
+                <th>Кількість / одиниця</th>
+                <th>Дата підписання</th>
+                <th>Номер договору</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {results.map((procedure) =>
+                procedure.rows.map((row, rowIndex) => (
+                  <tr key={row.id}>
+                    {rowIndex === 0 ? (
+                      <td
+                        className="procedure-cell"
+                        rowSpan={procedure.rows.length}
+                      >
+                        <strong>{procedure.title}</strong>
+                        <a
+                          href={`https://prozorro.gov.ua/tender/${procedure.tenderID}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {procedure.tenderID}
+                        </a>
+                        <span>Дата процедури: {formatDate(procedure.procedureDate)}</span>
+                        <span>Статус: {procedure.tenderStatus}</span>
+                      </td>
+                    ) : null}
+
+                    <td>
+                      {row.lotNumber ? (
+                        <>
+                          <strong>Лот {row.lotNumber}</strong>
+                          <span>{row.lotTitle}</span>
+                        </>
+                      ) : (
+                        ""
+                      )}
+                    </td>
+
+                    <td>
+                      {formatMoney(row.expectedAmount, row.expectedCurrency)}
+                    </td>
+
+                    <td>{formatDate(row.contractDate)}</td>
+
+                    <td>
+                      {formatMoney(row.contractAmount, row.contractCurrency)}
+                    </td>
+
+                    <td>{formatMoney(row.unitPrice, row.contractCurrency)}</td>
+
+                    <td>{row.supplierName}</td>
+
+                    <td>
+                      {row.quantity ? (
+                        <>
+                          {row.quantity}
+                          {row.unitName ? <span> {row.unitName}</span> : null}
+                        </>
+                      ) : (
+                        "Немає кількості"
+                      )}
+                    </td>
+
+                    <td>{formatDate(row.dateSigned)}</td>
+
+                    <td>{row.contractNumber}</td>
+
+                    <td>
+                      <div>{procedure.tenderStatus}</div>
+                      <span className="muted">Договір: {row.contractStatus}</span>
+                      <span className="muted">Award: {row.awardStatus}</span>
+                    </td>
+                  </tr>
+                )),
+              )}
+            </tbody>
+          </table>
+        </section>
+      )}
+
     </main>
   );
 }
+
+export default App;
