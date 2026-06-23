@@ -122,6 +122,18 @@ button:disabled {
   animation: search-spin 700ms linear infinite;
 }
 
+.search-finished {
+  width: fit-content;
+  margin-top: 14px;
+  border: 1px solid #bde7c9;
+  border-radius: 6px;
+  background: #ecfdf3;
+  color: #17633a;
+  padding: 10px 14px;
+  font-weight: 700;
+  animation: finished-pop 260ms ease-out;
+}
+
 .results {
   background: white;
   border: 1px solid #dce3ea;
@@ -247,6 +259,18 @@ a {
 
   100% {
     background: inherit;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes finished-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
     opacity: 1;
     transform: translateY(0);
   }

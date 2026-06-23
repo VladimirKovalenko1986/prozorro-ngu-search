@@ -277,6 +277,7 @@ function App() {
   const [checkedLots, setCheckedLots] = useState({});
   const [addingProcedureTitle, setAddingProcedureTitle] = useState("");
   const [recentlyAddedProcedureId, setRecentlyAddedProcedureId] = useState("");
+  const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
 
   function toggleProcedureChecked(procedureId) {
     setCheckedProcedures((current) => ({
@@ -300,6 +301,7 @@ function App() {
     if (!buyer?.edrpou) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
       setResults([]);
+      setSearchFinishedMessage("");
       return;
     }
 
@@ -309,6 +311,7 @@ function App() {
     setCheckedLots({});
     setAddingProcedureTitle("");
     setRecentlyAddedProcedureId("");
+    setSearchFinishedMessage("");
 
     const found = [];
     let page = 1;
@@ -383,8 +386,12 @@ function App() {
       setStatus(
         `Готово. Показано процедур: ${found.length}. API знайшов ${total} за тендерним періодом ${dateFrom} - ${dateTo}`,
       );
+      setSearchFinishedMessage(
+        `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
+      );
     } catch (error) {
       setStatus(`Помилка: ${error.message}`);
+      setSearchFinishedMessage("");
     } finally {
       setLoading(false);
       setAddingProcedureTitle("");
@@ -444,6 +451,12 @@ function App() {
                 ? `Додаю рядок: ${addingProcedureTitle}`
                 : "Шукаю процедури..."}
             </span>
+          </div>
+        ) : null}
+
+        {searchFinishedMessage ? (
+          <div className="search-finished" aria-live="polite">
+            {searchFinishedMessage}
           </div>
         ) : null}
       </section>
