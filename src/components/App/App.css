@@ -183,6 +183,11 @@ td span {
   background: #fff3b0;
 }
 
+.processed-row td:first-child,
+.processed-row .procedure-cell {
+  box-shadow: inset 4px 0 #d69e00;
+}
+
 .row-added td,
 .row-added .procedure-cell {
   animation: row-add 900ms ease-out;
@@ -221,6 +226,40 @@ td span {
 .procedure-cell a {
   display: block;
   margin-top: 10px;
+}
+
+.status-cell {
+  min-width: 150px;
+}
+
+.status-badge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 6px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-badge-progress {
+  background: #ffe58a;
+  color: #7a5200;
+}
+
+.status-badge-negative {
+  background: #ffb8b8;
+  color: #8f1d1d;
+}
+
+.status-badge-success {
+  background: #bff0cf;
+  color: #17633a;
+}
+
+.status-badge-neutral {
+  background: #e8edf2;
+  color: #53616f;
 }
 
 .table-panel {

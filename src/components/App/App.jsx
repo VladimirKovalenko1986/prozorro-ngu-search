@@ -32,6 +32,14 @@ function statusLabel(status) {
   return STATUS_LABELS[status] || status || "Немає статусу";
 }
 
+function getStatusTone(status) {
+  if (status === "complete") return "success";
+  if (status === "cancelled" || status === "unsuccessful") return "negative";
+  if (status) return "progress";
+
+  return "neutral";
+}
+
 function getEndOfDay(dateValue) {
   const date = new Date(dateValue);
   date.setHours(23, 59, 59, 999);
@@ -165,6 +173,10 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
   const expected = getLotExpectedValue(details, lot);
   const contractValue = getContractValue(contractDetails, contract);
   const supplier = getSupplier(contractDetails, contract, award);
+  const contractStatus = contractDetails?.status || contract?.status;
+  const contractStatusTone = contractStatus === "active"
+    ? "success"
+    : getStatusTone(contractStatus);
 
   return {
     id: `${details.id}-${lot?.id || contract?.id || lotIndex}`,
@@ -185,8 +197,10 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
     contractNumber: getContractNumber(contractDetails, contract),
     contractDate: getContractDate(contractDetails, contract),
     dateSigned: getContractSignedDate(contractDetails, contract),
-    contractStatus: statusLabel(contractDetails?.status || contract?.status),
+    contractStatus: statusLabel(contractStatus),
+    contractStatusTone,
     awardStatus: statusLabel(award?.status),
+    awardStatusTone: getStatusTone(award?.status),
   };
 }
 
@@ -255,13 +269,15 @@ async function fetchFullTenderDetails(searchItem) {
 
 function buildProcedureResult(details, item, lotRows) {
   const procedureDate = details.dateCreated || item.dateCreated;
+  const tenderStatus = details.status || item.status;
 
   return {
     id: details.id || item.id,
     tenderID: details.tenderID || item.tenderID,
     title: getProcedureTitle(details),
     procedureDate,
-    tenderStatus: statusLabel(details.status || item.status),
+    tenderStatus: statusLabel(tenderStatus),
+    tenderStatusTone: getStatusTone(tenderStatus),
     rows: lotRows,
   };
 }
@@ -531,7 +547,7 @@ function App() {
                       </td>
                     ) : null}
 
-                    <td>
+                    <td className="status-cell">
                       {row.lotNumber ? (
                         <label className="lot-check">
                           {hasMultipleLots ? (
@@ -582,9 +598,21 @@ function App() {
                     <td>{row.contractNumber}</td>
 
                     <td>
-                      <div>{procedure.tenderStatus}</div>
-                      <span className="muted">Договір: {row.contractStatus}</span>
-                      <span className="muted">Award: {row.awardStatus}</span>
+                      <div
+                        className={`status-badge status-badge-${procedure.tenderStatusTone}`}
+                      >
+                        {procedure.tenderStatus}
+                      </div>
+                      <span
+                        className={`status-badge status-badge-${row.contractStatusTone}`}
+                      >
+                        Договір: {row.contractStatus}
+                      </span>
+                      <span
+                        className={`status-badge status-badge-${row.awardStatusTone}`}
+                      >
+                        Award: {row.awardStatus}
+                      </span>
                     </td>
                   </tr>
                   );
