@@ -253,6 +253,22 @@ function App() {
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("Готово до пошуку");
   const [loading, setLoading] = useState(false);
+  const [checkedProcedures, setCheckedProcedures] = useState({});
+  const [checkedLots, setCheckedLots] = useState({});
+
+  function toggleProcedureChecked(procedureId) {
+    setCheckedProcedures((current) => ({
+      ...current,
+      [procedureId]: !current[procedureId],
+    }));
+  }
+
+  function toggleLotChecked(lotId) {
+    setCheckedLots((current) => ({
+      ...current,
+      [lotId]: !current[lotId],
+    }));
+  }
 
   async function handleSearch(event) {
     event.preventDefault();
@@ -267,6 +283,8 @@ function App() {
 
     setLoading(true);
     setResults([]);
+    setCheckedProcedures({});
+    setCheckedLots({});
 
     const found = [];
     let page = 1;
@@ -412,14 +430,29 @@ function App() {
 
             <tbody>
               {results.map((procedure) =>
-                procedure.rows.map((row, rowIndex) => (
-                  <tr key={row.id}>
+                procedure.rows.map((row, rowIndex) => {
+                  const isProcedureChecked = Boolean(
+                    checkedProcedures[procedure.id],
+                  );
+                  const isLotChecked = Boolean(checkedLots[row.id]);
+                  const isChecked = isProcedureChecked || isLotChecked;
+                  const hasMultipleLots = procedure.rows.length > 1;
+
+                  return (
+                  <tr className={isChecked ? "processed-row" : ""} key={row.id}>
                     {rowIndex === 0 ? (
                       <td
                         className="procedure-cell"
                         rowSpan={procedure.rows.length}
                       >
-                        <strong>{procedure.title}</strong>
+                        <label className="processed-check">
+                          <input
+                            checked={isProcedureChecked}
+                            onChange={() => toggleProcedureChecked(procedure.id)}
+                            type="checkbox"
+                          />
+                          <strong>{procedure.title}</strong>
+                        </label>
                         <a
                           href={`https://prozorro.gov.ua/tender/${procedure.tenderID}`}
                           target="_blank"
@@ -434,10 +467,20 @@ function App() {
 
                     <td>
                       {row.lotNumber ? (
-                        <>
-                          <strong>Лот {row.lotNumber}</strong>
-                          <span>{row.lotTitle}</span>
-                        </>
+                        <label className="lot-check">
+                          {hasMultipleLots ? (
+                            <input
+                              checked={isLotChecked}
+                              disabled={isProcedureChecked}
+                              onChange={() => toggleLotChecked(row.id)}
+                              type="checkbox"
+                            />
+                          ) : null}
+                          <span>
+                            <strong>Лот {row.lotNumber}</strong>
+                            <span>{row.lotTitle}</span>
+                          </span>
+                        </label>
                       ) : (
                         ""
                       )}
@@ -478,7 +521,8 @@ function App() {
                       <span className="muted">Award: {row.awardStatus}</span>
                     </td>
                   </tr>
-                )),
+                  );
+                }),
               )}
             </tbody>
           </table>

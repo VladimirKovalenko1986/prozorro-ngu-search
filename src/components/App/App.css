@@ -15,6 +15,13 @@ select {
   font: inherit;
 }
 
+input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  accent-color: #0b6bcb;
+}
+
 .page {
   min-height: 100vh;
   padding: 32px;
@@ -139,6 +146,41 @@ td span {
 .procedure-cell {
   width: 320px;
   background: #fbfcfd;
+}
+
+.processed-row td,
+.processed-row .procedure-cell {
+  background: #fff3b0;
+}
+
+.processed-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.processed-check input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.lot-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.lot-check input {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.lot-check input:disabled {
+  opacity: 0.5;
 }
 
 .procedure-cell a {
