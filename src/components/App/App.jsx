@@ -7,6 +7,7 @@ import {
 } from "../../services/prozorroApi.js";
 import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
+import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import "./App.css";
 
 const BUYERS = [
@@ -529,6 +530,7 @@ function App() {
         </section>
       )}
 
+      <ScrollToSearchButton />
     </main>
   );
 }
