@@ -30,6 +30,23 @@ function statusLabel(status) {
   return STATUS_LABELS[status] || status || "Немає статусу";
 }
 
+function getEndOfDay(dateValue) {
+  const date = new Date(dateValue);
+  date.setHours(23, 59, 59, 999);
+
+  return date;
+}
+
+function isDateInPeriod(dateValue, dateFrom, dateTo) {
+  if (!dateValue) return false;
+
+  const date = new Date(dateValue);
+  const from = new Date(dateFrom);
+  const to = getEndOfDay(dateTo);
+
+  return date >= from && date <= to;
+}
+
 function getRelatedLotId(entity) {
   return entity?.lotID || entity?.relatedLot || entity?.relatedItem || null;
 }
@@ -217,11 +234,13 @@ async function fetchFullTenderDetails(searchItem) {
 }
 
 function buildProcedureResult(details, item, lotRows) {
+  const procedureDate = details.dateCreated || item.dateCreated;
+
   return {
     id: details.id || item.id,
     tenderID: details.tenderID || item.tenderID,
     title: getProcedureTitle(details),
-    procedureDate: details.dateCreated || item.dateCreated,
+    procedureDate,
     tenderStatus: statusLabel(details.status || item.status),
     rows: lotRows,
   };
@@ -277,6 +296,13 @@ function App() {
           );
 
           const details = await fetchFullTenderDetails(item);
+          const procedureDate = details.dateCreated || item.dateCreated;
+
+          if (!isDateInPeriod(procedureDate, dateFrom, dateTo)) {
+            await wait(TENDER_REQUEST_DELAY_MS);
+            continue;
+          }
+
           const lots = details.lots?.length ? details.lots : [null];
           const lotRows = [];
 
@@ -306,7 +332,7 @@ function App() {
       }
 
       setStatus(
-        `Готово. Знайдено процедур: ${found.length} з ${total} за період ${dateFrom} - ${dateTo}`,
+        `Готово. Показано процедур: ${found.length}. API знайшов ${total} за тендерним періодом ${dateFrom} - ${dateTo}`,
       );
     } catch (error) {
       setStatus(`Помилка: ${error.message}`);
