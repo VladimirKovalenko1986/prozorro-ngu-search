@@ -193,6 +193,24 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function formatInputDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultDateFrom() {
+  const today = new Date();
+
+  return formatInputDate(new Date(today.getFullYear(), today.getMonth(), 1));
+}
+
+function getDefaultDateTo() {
+  return formatInputDate(new Date());
+}
+
 function buildFallbackDetails(searchItem) {
   return {
     id: searchItem.tenderID,
@@ -249,8 +267,8 @@ function buildProcedureResult(details, item, lotRows) {
 
 function App() {
   const [selectedBuyer, setSelectedBuyer] = useState(BUYERS[0].label);
-  const [dateFrom, setDateFrom] = useState("2026-05-01");
-  const [dateTo, setDateTo] = useState("2026-06-20");
+  const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
+  const [dateTo, setDateTo] = useState(getDefaultDateTo);
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("Готово до пошуку");
   const [loading, setLoading] = useState(false);
