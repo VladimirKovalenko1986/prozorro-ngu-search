@@ -17,6 +17,7 @@ const BUYERS = [
 
 const MAX_SEARCH_PAGES = 100;
 const TENDER_REQUEST_DELAY_MS = 700;
+const ADD_ROW_ANIMATION_MS = 450;
 
 const STATUS_LABELS = {
   active: "Активний",
@@ -274,6 +275,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [checkedProcedures, setCheckedProcedures] = useState({});
   const [checkedLots, setCheckedLots] = useState({});
+  const [addingProcedureTitle, setAddingProcedureTitle] = useState("");
+  const [recentlyAddedProcedureId, setRecentlyAddedProcedureId] = useState("");
 
   function toggleProcedureChecked(procedureId) {
     setCheckedProcedures((current) => ({
@@ -304,6 +307,8 @@ function App() {
     setResults([]);
     setCheckedProcedures({});
     setCheckedLots({});
+    setAddingProcedureTitle("");
+    setRecentlyAddedProcedureId("");
 
     const found = [];
     let page = 1;
@@ -359,8 +364,15 @@ function App() {
             );
           }
 
-          found.push(buildProcedureResult(details, item, lotRows));
+          const procedureResult = buildProcedureResult(details, item, lotRows);
+
+          setAddingProcedureTitle(procedureResult.title);
+          await wait(ADD_ROW_ANIMATION_MS);
+
+          found.push(procedureResult);
+          setRecentlyAddedProcedureId(procedureResult.id);
           setResults([...found]);
+          setAddingProcedureTitle("");
 
           await wait(TENDER_REQUEST_DELAY_MS);
         }
@@ -375,6 +387,7 @@ function App() {
       setStatus(`Помилка: ${error.message}`);
     } finally {
       setLoading(false);
+      setAddingProcedureTitle("");
     }
   }
 
@@ -422,6 +435,17 @@ function App() {
         </form>
 
         <p className="status">{status}</p>
+
+        {loading ? (
+          <div className="search-activity" aria-live="polite">
+            <span className="search-spinner" aria-hidden="true" />
+            <span>
+              {addingProcedureTitle
+                ? `Додаю рядок: ${addingProcedureTitle}`
+                : "Шукаю процедури..."}
+            </span>
+          </div>
+        ) : null}
       </section>
 
       {results.length === 0 ? (
@@ -456,9 +480,19 @@ function App() {
                   const isLotChecked = Boolean(checkedLots[row.id]);
                   const isChecked = isProcedureChecked || isLotChecked;
                   const hasMultipleLots = procedure.rows.length > 1;
+                  const isRecentlyAdded =
+                    procedure.id === recentlyAddedProcedureId;
 
                   return (
-                  <tr className={isChecked ? "processed-row" : ""} key={row.id}>
+                  <tr
+                    className={[
+                      isChecked ? "processed-row" : "",
+                      isRecentlyAdded ? "row-added" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    key={row.id}
+                  >
                     {rowIndex === 0 ? (
                       <td
                         className="procedure-cell"
