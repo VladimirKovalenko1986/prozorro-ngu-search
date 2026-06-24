@@ -18,6 +18,10 @@ const BUYERS = [
 const MAX_SEARCH_PAGES = 100;
 const TENDER_REQUEST_DELAY_MS = 700;
 const ADD_ROW_ANIMATION_MS = 450;
+const STORAGE_KEYS = {
+  procedures: "prozorro-ngu-checked-procedures",
+  lots: "prozorro-ngu-checked-lots",
+};
 
 const STATUS_LABELS = {
   active: "Активний",
@@ -30,6 +34,18 @@ const STATUS_LABELS = {
 
 function statusLabel(status) {
   return STATUS_LABELS[status] || status || "Немає статусу";
+}
+
+function readStoredChecks(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredChecks(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function getStatusTone(status) {
@@ -289,24 +305,46 @@ function App() {
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("Готово до пошуку");
   const [loading, setLoading] = useState(false);
-  const [checkedProcedures, setCheckedProcedures] = useState({});
-  const [checkedLots, setCheckedLots] = useState({});
+  const [checkedProcedures, setCheckedProcedures] = useState(() =>
+    readStoredChecks(STORAGE_KEYS.procedures),
+  );
+  const [checkedLots, setCheckedLots] = useState(() =>
+    readStoredChecks(STORAGE_KEYS.lots),
+  );
   const [addingProcedureTitle, setAddingProcedureTitle] = useState("");
   const [recentlyAddedProcedureId, setRecentlyAddedProcedureId] = useState("");
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
 
   function toggleProcedureChecked(procedureId) {
-    setCheckedProcedures((current) => ({
-      ...current,
-      [procedureId]: !current[procedureId],
-    }));
+    setCheckedProcedures((current) => {
+      const next = { ...current };
+
+      if (next[procedureId]) {
+        delete next[procedureId];
+      } else {
+        next[procedureId] = true;
+      }
+
+      writeStoredChecks(STORAGE_KEYS.procedures, next);
+
+      return next;
+    });
   }
 
   function toggleLotChecked(lotId) {
-    setCheckedLots((current) => ({
-      ...current,
-      [lotId]: !current[lotId],
-    }));
+    setCheckedLots((current) => {
+      const next = { ...current };
+
+      if (next[lotId]) {
+        delete next[lotId];
+      } else {
+        next[lotId] = true;
+      }
+
+      writeStoredChecks(STORAGE_KEYS.lots, next);
+
+      return next;
+    });
   }
 
   async function handleSearch(event) {
@@ -323,8 +361,6 @@ function App() {
 
     setLoading(true);
     setResults([]);
-    setCheckedProcedures({});
-    setCheckedLots({});
     setAddingProcedureTitle("");
     setRecentlyAddedProcedureId("");
     setSearchFinishedMessage("");
@@ -504,7 +540,7 @@ function App() {
               {results.map((procedure) =>
                 procedure.rows.map((row, rowIndex) => {
                   const isProcedureChecked = Boolean(
-                    checkedProcedures[procedure.id],
+                    checkedProcedures[procedure.tenderID],
                   );
                   const isLotChecked = Boolean(checkedLots[row.id]);
                   const isChecked = isProcedureChecked || isLotChecked;
@@ -530,7 +566,9 @@ function App() {
                         <label className="processed-check">
                           <input
                             checked={isProcedureChecked}
-                            onChange={() => toggleProcedureChecked(procedure.id)}
+                            onChange={() =>
+                              toggleProcedureChecked(procedure.tenderID)
+                            }
                             type="checkbox"
                           />
                           <strong>{procedure.title}</strong>
@@ -547,7 +585,7 @@ function App() {
                       </td>
                     ) : null}
 
-                    <td className="status-cell">
+                    <td>
                       {row.lotNumber ? (
                         <label className="lot-check">
                           {hasMultipleLots ? (
@@ -568,7 +606,7 @@ function App() {
                       )}
                     </td>
 
-                    <td>
+                    <td className="status-cell">
                       {formatMoney(row.expectedAmount, row.expectedCurrency)}
                     </td>
 
