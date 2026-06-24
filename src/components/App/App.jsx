@@ -7,6 +7,7 @@ import {
 } from "../../services/prozorroApi.js";
 import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
+import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import "./App.css";
 
@@ -491,6 +492,14 @@ function App() {
           <button type="submit" disabled={loading}>
             {loading ? "Шукаю..." : "Шукати"}
           </button>
+
+          <ExportExcelButton
+            buyer={selectedBuyer}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            disabled={loading}
+            results={results}
+          />
         </form>
 
         <p className="status">{status}</p>

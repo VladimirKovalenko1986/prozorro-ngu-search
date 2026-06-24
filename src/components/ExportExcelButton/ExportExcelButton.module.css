@@ -1,0 +1,24 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #188038;
+}
+
+.button:hover:not(:disabled) {
+  background: #0f6b2b;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: white;
+  color: #188038;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
