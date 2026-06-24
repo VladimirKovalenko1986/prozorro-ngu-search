@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   fetchContractDetails,
   fetchTenderSearchPage,
@@ -32,6 +32,27 @@ const STATUS_LABELS = {
   pending: "В процесі",
   pending_payment: "Очікує оплату",
 };
+
+const TABLE_COLUMNS = [
+  { key: "title", label: "Предмет закупівлі" },
+  { key: "lot", label: "Лоти" },
+  { key: "expectedAmount", label: "Очікувана / початкова вартість" },
+  { key: "contractDate", label: "Дата договору" },
+  { key: "contractAmount", label: "Сума договору" },
+  { key: "unitPrice", label: "Ціна за одиницю" },
+  { key: "supplier", label: "Контрагент", className: "supplier-column" },
+  { key: "quantity", label: "Кількість / одиниця" },
+  { key: "dateSigned", label: "Дата підписання" },
+  { key: "contractNumber", label: "Номер договору" },
+  { key: "status", label: "Статус", className: "status-column" },
+];
+
+const FILTER_COLUMNS = [
+  { key: "supplier", label: "Контрагент" },
+  { key: "dateSigned", label: "Дата підписання" },
+  { key: "contractNumber", label: "Номер договору" },
+  { key: "status", label: "Статус" },
+];
 
 function statusLabel(status) {
   return STATUS_LABELS[status] || status || "Немає статусу";
@@ -115,6 +136,12 @@ function getUnitName(items = []) {
   if (uniqueUnits.length > 1) return "різні одиниці";
 
   return "";
+}
+
+function getQuantityLabel(row) {
+  if (!row.quantity) return "Немає кількості";
+
+  return row.unitName ? `${row.quantity} ${row.unitName}` : String(row.quantity);
 }
 
 function getProcedureTitle(details) {
@@ -299,6 +326,77 @@ function buildProcedureResult(details, item, lotRows) {
   };
 }
 
+function getFilterValue(procedure, row, key) {
+  const values = {
+    title: procedure.title,
+    lot: row.lotNumber ? `Лот ${row.lotNumber}. ${row.lotTitle}` : "Без лотів",
+    expectedAmount: formatMoney(row.expectedAmount, row.expectedCurrency),
+    contractDate: formatDate(row.contractDate),
+    contractAmount: formatMoney(row.contractAmount, row.contractCurrency),
+    unitPrice: formatMoney(row.unitPrice, row.contractCurrency),
+    supplier: row.supplierName,
+    quantity: getQuantityLabel(row),
+    dateSigned: formatDate(row.dateSigned),
+    contractNumber: row.contractNumber,
+  };
+
+  return values[key] || "";
+}
+
+function getStatusFilterValues(procedure, row) {
+  return [
+    `Процедура: ${procedure.tenderStatus}`,
+    `Договір: ${row.contractStatus}`,
+    `Award: ${row.awardStatus}`,
+  ];
+}
+
+function buildFilterOptions(results, key) {
+  const values = new Set();
+
+  for (const procedure of results) {
+    for (const row of procedure.rows) {
+      if (key === "status") {
+        getStatusFilterValues(procedure, row).forEach((value) =>
+          values.add(value),
+        );
+      } else {
+        const value = getFilterValue(procedure, row, key);
+
+        if (value) values.add(value);
+      }
+    }
+  }
+
+  return [...values].sort((a, b) => a.localeCompare(b, "uk"));
+}
+
+function filterResults(results, filters) {
+  const activeFilters = Object.entries(filters).filter(
+    ([, values]) => values.length > 0,
+  );
+
+  if (activeFilters.length === 0) return results;
+
+  return results
+    .map((procedure) => {
+      const rows = procedure.rows.filter((row) =>
+        activeFilters.every(([key, values]) => {
+          if (key === "status") {
+            return getStatusFilterValues(procedure, row).some((value) =>
+              values.includes(value),
+            );
+          }
+
+          return values.includes(getFilterValue(procedure, row, key));
+        }),
+      );
+
+      return { ...procedure, rows };
+    })
+    .filter((procedure) => procedure.rows.length > 0);
+}
+
 function App() {
   const [selectedBuyer, setSelectedBuyer] = useState(BUYERS[0].label);
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
@@ -315,6 +413,38 @@ function App() {
   const [addingProcedureTitle, setAddingProcedureTitle] = useState("");
   const [recentlyAddedProcedureId, setRecentlyAddedProcedureId] = useState("");
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
+  const [filters, setFilters] = useState({});
+  const filteredResults = useMemo(
+    () => filterResults(results, filters),
+    [results, filters],
+  );
+  const filterOptions = useMemo(
+    () =>
+      FILTER_COLUMNS.reduce(
+        (options, column) => ({
+          ...options,
+          [column.key]: buildFilterOptions(results, column.key),
+        }),
+        {},
+      ),
+    [results],
+  );
+  const hasActiveFilters = Object.values(filters).some(
+    (values) => values.length > 0,
+  );
+
+  function toggleFilterValue(key, value) {
+    setFilters((current) => ({
+      ...current,
+      [key]: current[key]?.includes(value)
+        ? current[key].filter((item) => item !== value)
+        : [...(current[key] || []), value],
+    }));
+  }
+
+  function clearFilters() {
+    setFilters({});
+  }
 
   function toggleProcedureChecked(procedureId) {
     setCheckedProcedures((current) => {
@@ -498,7 +628,7 @@ function App() {
             dateFrom={dateFrom}
             dateTo={dateTo}
             disabled={loading}
-            results={results}
+            results={filteredResults}
           />
         </form>
 
@@ -522,31 +652,83 @@ function App() {
         ) : null}
       </section>
 
+      {results.length > 0 ? (
+        <div className="filter-summary">
+          <span>
+            Показано після фільтрів: {filteredResults.length} з {results.length}
+          </span>
+          <button
+            className="clear-filters"
+            disabled={loading || !hasActiveFilters}
+            onClick={clearFilters}
+            type="button"
+          >
+            Скинути фільтри
+          </button>
+        </div>
+      ) : null}
+
       {results.length === 0 ? (
         <section className="table-panel empty-panel">
           Поки немає результатів.
+        </section>
+      ) : filteredResults.length === 0 ? (
+        <section className="table-panel empty-panel">
+          За цими фільтрами немає результатів.
         </section>
       ) : (
         <section className="table-panel">
           <table>
             <thead>
               <tr>
-                <th>Предмет закупівлі</th>
-                <th>Лоти</th>
-                <th>Очікувана / початкова вартість</th>
-                <th>Дата договору</th>
-                <th>Сума договору</th>
-                <th>Ціна за одиницю</th>
-                <th>Контрагент</th>
-                <th>Кількість / одиниця</th>
-                <th>Дата підписання</th>
-                <th>Номер договору</th>
-                <th>Статус</th>
+                {TABLE_COLUMNS.map((column) => (
+                  <th className={column.className || ""} key={column.key}>
+                    <span className="column-title">{column.label}</span>
+
+                    {filterOptions[column.key] ? (
+                      loading ? (
+                        <button
+                          className="filter-trigger"
+                          disabled
+                          type="button"
+                        >
+                          Фільтр
+                        </button>
+                      ) : (
+                        <details className="filter-menu">
+                          <summary>
+                            Фільтр
+                            {filters[column.key]?.length
+                              ? ` (${filters[column.key].length})`
+                              : ""}
+                          </summary>
+
+                          <div className="filter-options">
+                            {filterOptions[column.key].map((option) => (
+                              <label className="filter-option" key={option}>
+                                <input
+                                  checked={Boolean(
+                                    filters[column.key]?.includes(option),
+                                  )}
+                                  onChange={() =>
+                                    toggleFilterValue(column.key, option)
+                                  }
+                                  type="checkbox"
+                                />
+                                <span>{option}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </details>
+                      )
+                    ) : null}
+                  </th>
+                ))}
               </tr>
             </thead>
 
             <tbody>
-              {results.map((procedure) =>
+              {filteredResults.map((procedure) =>
                 procedure.rows.map((row, rowIndex) => {
                   const isProcedureChecked = Boolean(
                     checkedProcedures[procedure.tenderID],
@@ -615,7 +797,7 @@ function App() {
                       )}
                     </td>
 
-                    <td className="status-cell">
+                    <td>
                       {formatMoney(row.expectedAmount, row.expectedCurrency)}
                     </td>
 
@@ -627,9 +809,9 @@ function App() {
 
                     <td>{formatMoney(row.unitPrice, row.contractCurrency)}</td>
 
-                    <td>{row.supplierName}</td>
+                    <td className="supplier-cell">{row.supplierName}</td>
 
-                    <td>
+                    <td className="status-cell">
                       {row.quantity ? (
                         <>
                           {row.quantity}
