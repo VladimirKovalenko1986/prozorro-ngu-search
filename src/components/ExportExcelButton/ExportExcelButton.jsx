@@ -5,6 +5,7 @@ import css from "./ExportExcelButton.module.css";
 function getColumns(showBuyerColumn) {
   return [
     "Предмет закупівлі",
+    "Вид процедури",
     ...(showBuyerColumn ? ["Замовник"] : []),
     "Процедура",
     "Дата процедури",
@@ -49,6 +50,7 @@ function buildExcelRows(results, showBuyerColumn) {
   return results.flatMap((procedure) =>
     procedure.rows.map((row) => [
       procedure.title,
+      procedure.procedureType,
       ...(showBuyerColumn ? [procedure.buyerUnit] : []),
       procedure.tenderID,
       formatDate(procedure.procedureDate),

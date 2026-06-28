@@ -289,6 +289,18 @@ td span {
   background: #fbfcfd;
 }
 
+.procedure-type-column,
+.procedure-type-cell {
+  width: 150px;
+  max-width: 150px;
+}
+
+.procedure-type-cell {
+  color: #53616f;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .supplier-column,
 .supplier-cell {
   width: 190px;

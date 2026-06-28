@@ -119,8 +119,27 @@ const STATUS_LABELS = {
   pending_payment: "Очікує оплату",
 };
 
+const PROCEDURE_TYPE_LABELS = {
+  belowThreshold: "Спрощена закупівля",
+  closeFrameworkAgreementUA: "Укладання рамкової угоди",
+  closeFrameworkAgreementSelectionUA: "Відбір для закупівлі за рамковою угодою",
+  competitiveDialogueEU: "Конкурентний діалог з публікацією англійською мовою",
+  competitiveDialogueUA: "Конкурентний діалог",
+  esco: "Закупівля енергосервісу",
+  negotiation: "Переговорна процедура",
+  "negotiation.quick": "Переговорна процедура скорочена",
+  priceQuotation: "Запит (ціни) пропозицій",
+  reporting: "Звіт про договір про закупівлю",
+  simple: "Спрощена закупівля",
+  "simple.defense": "Спрощена закупівля для потреб оборони",
+  aboveThresholdEU: "Відкриті торги з публікацією англійською мовою",
+  aboveThresholdUA: "Відкриті торги",
+  "aboveThresholdUA.defense": "Відкриті торги для потреб оборони",
+};
+
 const TABLE_COLUMNS = [
   { key: "title", label: "Предмет закупівлі" },
+  { key: "procedureType", label: "Вид процедури", className: "procedure-type-column" },
   { key: "buyerUnit", label: "Замовник", className: "buyer-column" },
   { key: "lot", label: "Лоти / специфікація" },
   { key: "expectedAmount", label: "Очікувана / початкова вартість" },
@@ -142,6 +161,10 @@ const FILTER_COLUMNS = [
 
 function statusLabel(status) {
   return STATUS_LABELS[status] || status || "Немає статусу";
+}
+
+function procedureTypeLabel(type) {
+  return PROCEDURE_TYPE_LABELS[type] || type || "Немає виду";
 }
 
 function readStoredChecks(key) {
@@ -458,6 +481,7 @@ function buildFallbackDetails(searchItem) {
     tenderID: searchItem.tenderID,
     title: searchItem.title,
     status: searchItem.status,
+    procurementMethodType: searchItem.procurementMethodType,
     value: searchItem.value,
     procuringEntity: searchItem.procuringEntity,
     buyer: searchItem.buyer,
@@ -498,12 +522,14 @@ async function fetchFullTenderDetails(searchItem) {
 function buildProcedureResult(details, item, lotRows) {
   const procedureDate = details.dateCreated || item.dateCreated;
   const tenderStatus = details.status || item.status;
+  const procedureType = details.procurementMethodType || item.procurementMethodType;
 
   return {
     id: details.id || item.id,
     tenderID: details.tenderID || item.tenderID,
     buyerUnit: getBuyerUnit(details, item),
     title: getProcedureTitle(details),
+    procedureType: procedureTypeLabel(procedureType),
     procedureDate,
     tenderStatus: statusLabel(tenderStatus),
     tenderStatusTone: getStatusTone(tenderStatus),
@@ -976,6 +1002,15 @@ function App() {
                         </a>
                         <span>Дата процедури: {formatDate(procedure.procedureDate)}</span>
                         <span>Статус: {procedure.tenderStatus}</span>
+                      </td>
+                    ) : null}
+
+                    {rowIndex === 0 ? (
+                      <td
+                        className="procedure-type-cell"
+                        rowSpan={procedure.rows.length}
+                      >
+                        {procedure.procedureType}
                       </td>
                     ) : null}
 
