@@ -295,6 +295,16 @@ td span {
   max-width: 190px;
 }
 
+.buyer-column,
+.buyer-cell {
+  width: 90px;
+  max-width: 90px;
+}
+
+.buyer-cell {
+  font-weight: 700;
+}
+
 .supplier-cell {
   overflow-wrap: anywhere;
 }

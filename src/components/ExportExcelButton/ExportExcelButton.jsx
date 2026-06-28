@@ -2,24 +2,26 @@ import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
 import css from "./ExportExcelButton.module.css";
 
-const COLUMNS = [
-  "Предмет закупівлі",
-  "Процедура",
-  "Дата процедури",
-  "Лот",
-  "Очікувана / початкова вартість",
-  "Дата договору",
-  "Сума договору",
-  "Ціна за одиницю",
-  "Контрагент",
-  "Кількість",
-  "Одиниця",
-  "Дата підписання",
-  "Номер договору",
-  "Статус процедури",
-  "Статус договору",
-  "Статус Award",
-];
+function getColumns(showBuyerColumn) {
+  return [
+    "Предмет закупівлі",
+    ...(showBuyerColumn ? ["Замовник"] : []),
+    "Процедура",
+    "Дата процедури",
+    "Лот",
+    "Очікувана / початкова вартість",
+    "Сума договору",
+    "Ціна за одиницю",
+    "Контрагент",
+    "Кількість",
+    "Одиниця",
+    "Дата підписання",
+    "Номер договору",
+    "Статус процедури",
+    "Статус договору",
+    "Статус Award",
+  ];
+}
 
 function escapeCell(value) {
   return String(value ?? "")
@@ -29,15 +31,15 @@ function escapeCell(value) {
     .replaceAll('"', "&quot;");
 }
 
-function buildExcelRows(results) {
+function buildExcelRows(results, showBuyerColumn) {
   return results.flatMap((procedure) =>
     procedure.rows.map((row) => [
       procedure.title,
+      ...(showBuyerColumn ? [procedure.buyerUnit] : []),
       procedure.tenderID,
       formatDate(procedure.procedureDate),
       row.lotNumber ? `Лот ${row.lotNumber}. ${row.lotTitle}` : "",
       formatMoney(row.expectedAmount, row.expectedCurrency),
-      formatDate(row.contractDate),
       formatMoney(row.contractAmount, row.contractCurrency),
       formatMoney(row.unitPrice, row.contractCurrency),
       row.supplierName,
@@ -52,11 +54,11 @@ function buildExcelRows(results) {
   );
 }
 
-function buildExcelHtml(results) {
-  const header = COLUMNS.map((column) => `<th>${escapeCell(column)}</th>`).join(
-    "",
-  );
-  const rows = buildExcelRows(results)
+function buildExcelHtml(results, showBuyerColumn) {
+  const header = getColumns(showBuyerColumn)
+    .map((column) => `<th>${escapeCell(column)}</th>`)
+    .join("");
+  const rows = buildExcelRows(results, showBuyerColumn)
     .map(
       (row) =>
         `<tr>${row
@@ -95,9 +97,10 @@ export default function ExportExcelButton({
   dateTo,
   disabled,
   results,
+  showBuyerColumn,
 }) {
   function handleExport() {
-    const excelHtml = buildExcelHtml(results);
+    const excelHtml = buildExcelHtml(results, showBuyerColumn);
     const blob = new Blob(["\ufeff", excelHtml], {
       type: "application/vnd.ms-excel;charset=utf-8",
     });

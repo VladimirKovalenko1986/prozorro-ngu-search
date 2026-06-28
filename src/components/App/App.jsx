@@ -11,9 +11,95 @@ import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import "./App.css";
 
+const NGU_EDRPOUS = [
+  "25575747",
+  "23313871",
+  "23316220",
+  "25575569",
+  "25575730",
+  "08803589",
+  "08803617",
+  "45920055",
+  "25575782",
+  "08803543",
+  "08803773",
+  "08803595",
+  "25575767",
+  "14323416",
+  "14323422",
+  "08682683",
+  "08803572",
+  "08803796",
+  "23316473",
+  "14323385",
+  "44862706",
+  "44849762",
+  "08803690",
+  "08803715",
+  "25575753",
+  "23313859",
+  "08803738",
+  "25575871",
+  "08803508",
+  "43391217",
+  "45526274",
+  "08803678",
+  "25575799",
+  "23314215",
+  "37760707",
+  "23313888",
+  "08803632",
+  "23313925",
+  "23313931",
+  "24520810",
+  "08803709",
+  "14323646",
+  "23313948",
+  "08803649",
+  "08803655",
+  "08803661",
+  "23313842",
+  "45928368",
+  "14322977",
+  "08803781",
+  "45120935",
+  "39309315",
+  "39806952",
+  "23313902",
+  "08803684",
+  "08803498",
+  "14323600",
+  "14322859",
+  "14323511",
+  "14323534",
+  "08803566",
+  "40163246",
+  "43811869",
+  "40668589",
+  "44709450",
+  "45083595",
+  "45134733",
+  "45373095",
+  "08803804",
+  "25574423",
+  "08803827",
+  "44835131",
+  "45842155",
+  "46127109",
+  "14322902",
+  "14323563",
+  "08610502",
+  "44633214",
+  "14323014",
+  "35670224",
+  "37727209",
+  "45498515",
+  "34462067",
+];
+
 const BUYERS = [
-  { label: "ГУ НГУ", edrpou: "08803498" },
-  { label: "НГУ", edrpou: "" },
+  { label: "ГУ НГУ", edrpous: ["08803498"] },
+  { label: "НГУ", edrpous: [...new Set(NGU_EDRPOUS)] },
 ];
 
 const MAX_SEARCH_PAGES = 100;
@@ -35,9 +121,9 @@ const STATUS_LABELS = {
 
 const TABLE_COLUMNS = [
   { key: "title", label: "Предмет закупівлі" },
+  { key: "buyerUnit", label: "Замовник", className: "buyer-column" },
   { key: "lot", label: "Лоти" },
   { key: "expectedAmount", label: "Очікувана / початкова вартість" },
-  { key: "contractDate", label: "Дата договору" },
   { key: "contractAmount", label: "Сума договору" },
   { key: "unitPrice", label: "Ціна за одиницю" },
   { key: "supplier", label: "Контрагент", className: "supplier-column" },
@@ -144,6 +230,29 @@ function getQuantityLabel(row) {
   return row.unitName ? `${row.quantity} ${row.unitName}` : String(row.quantity);
 }
 
+function getBuyerName(details, item) {
+  return (
+    details.procuringEntity?.name ||
+    details.buyer?.name ||
+    item.procuringEntity?.name ||
+    item.buyer?.name ||
+    ""
+  );
+}
+
+function getBuyerUnit(details, item) {
+  const buyerName = getBuyerName(details, item);
+  const unitMatch = buyerName.match(
+    /(?:військова\s+частина|в\/ч|частина)\s*([A-ZА-ЯІЇЄҐ]?\d{3,6})/i,
+  );
+
+  if (unitMatch) return unitMatch[1];
+
+  const numberMatch = buyerName.match(/\b\d{3,6}\b/);
+
+  return numberMatch?.[0] || buyerName || "Немає замовника";
+}
+
 function getProcedureTitle(details) {
   return details.title || "Без назви";
 }
@@ -171,16 +280,6 @@ function getContractValue(contractDetails, contract) {
     currency:
       contractDetails?.value?.currency || contract?.value?.currency || "UAH",
   };
-}
-
-function getContractDate(contractDetails, contract) {
-  return (
-    contractDetails?.dateCreated ||
-    contractDetails?.date ||
-    contract?.dateCreated ||
-    contract?.date ||
-    null
-  );
 }
 
 function getContractSignedDate(contractDetails, contract) {
@@ -239,7 +338,6 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
     unitPrice:
       contractValue.amount && quantity ? contractValue.amount / quantity : null,
     contractNumber: getContractNumber(contractDetails, contract),
-    contractDate: getContractDate(contractDetails, contract),
     dateSigned: getContractSignedDate(contractDetails, contract),
     contractStatus: statusLabel(contractStatus),
     contractStatusTone,
@@ -277,6 +375,8 @@ function buildFallbackDetails(searchItem) {
     title: searchItem.title,
     status: searchItem.status,
     value: searchItem.value,
+    procuringEntity: searchItem.procuringEntity,
+    buyer: searchItem.buyer,
     dateCreated:
       searchItem.tenderPeriod?.startDate || searchItem.dateCreated || null,
     tenderPeriod: searchItem.tenderPeriod || {},
@@ -318,6 +418,7 @@ function buildProcedureResult(details, item, lotRows) {
   return {
     id: details.id || item.id,
     tenderID: details.tenderID || item.tenderID,
+    buyerUnit: getBuyerUnit(details, item),
     title: getProcedureTitle(details),
     procedureDate,
     tenderStatus: statusLabel(tenderStatus),
@@ -331,7 +432,6 @@ function getFilterValue(procedure, row, key) {
     title: procedure.title,
     lot: row.lotNumber ? `Лот ${row.lotNumber}. ${row.lotTitle}` : "Без лотів",
     expectedAmount: formatMoney(row.expectedAmount, row.expectedCurrency),
-    contractDate: formatDate(row.contractDate),
     contractAmount: formatMoney(row.contractAmount, row.contractCurrency),
     unitPrice: formatMoney(row.unitPrice, row.contractCurrency),
     supplier: row.supplierName,
@@ -414,6 +514,14 @@ function App() {
   const [recentlyAddedProcedureId, setRecentlyAddedProcedureId] = useState("");
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
   const [filters, setFilters] = useState({});
+  const showBuyerColumn = selectedBuyer === "НГУ";
+  const tableColumns = useMemo(
+    () =>
+      TABLE_COLUMNS.filter(
+        (column) => column.key !== "buyerUnit" || showBuyerColumn,
+      ),
+    [showBuyerColumn],
+  );
   const filteredResults = useMemo(
     () => filterResults(results, filters),
     [results, filters],
@@ -483,7 +591,7 @@ function App() {
 
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
 
-    if (!buyer?.edrpou) {
+    if (!buyer?.edrpous?.length) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
       setResults([]);
       setSearchFinishedMessage("");
@@ -497,73 +605,83 @@ function App() {
     setSearchFinishedMessage("");
 
     const found = [];
-    let page = 1;
+    const foundTenderIds = new Set();
     let total = 0;
-    let totalPages = 1;
 
     try {
-      while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
-        const json = await fetchTenderSearchPage({
-          edrpou: buyer.edrpou,
-          dateFrom,
-          dateTo,
-          page,
-        });
-        const rows = json.data || [];
+      for (const [edrpouIndex, edrpou] of buyer.edrpous.entries()) {
+        let page = 1;
+        let totalPages = 1;
 
-        total = json.total || rows.length;
-        totalPages = Math.max(1, Math.ceil(total / (json.per_page || 20)));
+        while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
+          const json = await fetchTenderSearchPage({
+            edrpou,
+            dateFrom,
+            dateTo,
+            page,
+          });
+          const rows = json.data || [];
+          const edrpouTotal = json.total || rows.length;
 
-        setStatus(
-          `Перевіряю сторінку ${page} з ${totalPages}. Знайдено процедур у пошуку: ${total}`,
-        );
+          total += page === 1 ? edrpouTotal : 0;
+          totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
 
-        for (const [itemIndex, item] of rows.entries()) {
           setStatus(
-            `Сторінка ${page} з ${totalPages}. Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Уже показано: ${found.length} з ${total}`,
+            `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Сторінка ${page} з ${totalPages}. API знайшов: ${edrpouTotal}. Уже показано: ${found.length}`,
           );
 
-          const details = await fetchFullTenderDetails(item);
-          const procedureDate = details.dateCreated || item.dateCreated;
+          for (const [itemIndex, item] of rows.entries()) {
+            if (foundTenderIds.has(item.tenderID)) {
+              continue;
+            }
 
-          if (!isDateInPeriod(procedureDate, dateFrom, dateTo)) {
-            await wait(TENDER_REQUEST_DELAY_MS);
-            continue;
-          }
-
-          const lots = details.lots?.length ? details.lots : [null];
-          const lotRows = [];
-
-          for (const [lotIndex, lot] of lots.entries()) {
-            const award = findAwardForLot(details, lot);
-            const contract = findContractForLot(details, lot, award);
-            const contractDetails = await fetchContractDetails(contract?.id);
-
-            lotRows.push(
-              buildLotRow(
-                details,
-                lot,
-                lotIndex,
-                lots.length,
-                contractDetails,
-              ),
+            setStatus(
+              `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Уже показано: ${found.length}`,
             );
+
+            const details = await fetchFullTenderDetails(item);
+            const procedureDate = details.dateCreated || item.dateCreated;
+
+            if (!isDateInPeriod(procedureDate, dateFrom, dateTo)) {
+              await wait(TENDER_REQUEST_DELAY_MS);
+              continue;
+            }
+
+            const lots = details.lots?.length ? details.lots : [null];
+            const lotRows = [];
+
+            for (const [lotIndex, lot] of lots.entries()) {
+              const award = findAwardForLot(details, lot);
+              const contract = findContractForLot(details, lot, award);
+              const contractDetails = await fetchContractDetails(contract?.id);
+
+              lotRows.push(
+                buildLotRow(
+                  details,
+                  lot,
+                  lotIndex,
+                  lots.length,
+                  contractDetails,
+                ),
+              );
+            }
+
+            const procedureResult = buildProcedureResult(details, item, lotRows);
+
+            setAddingProcedureTitle(procedureResult.title);
+            await wait(ADD_ROW_ANIMATION_MS);
+
+            foundTenderIds.add(procedureResult.tenderID);
+            found.push(procedureResult);
+            setRecentlyAddedProcedureId(procedureResult.id);
+            setResults([...found]);
+            setAddingProcedureTitle("");
+
+            await wait(TENDER_REQUEST_DELAY_MS);
           }
 
-          const procedureResult = buildProcedureResult(details, item, lotRows);
-
-          setAddingProcedureTitle(procedureResult.title);
-          await wait(ADD_ROW_ANIMATION_MS);
-
-          found.push(procedureResult);
-          setRecentlyAddedProcedureId(procedureResult.id);
-          setResults([...found]);
-          setAddingProcedureTitle("");
-
-          await wait(TENDER_REQUEST_DELAY_MS);
+          page += 1;
         }
-
-        page += 1;
       }
 
       setStatus(
@@ -629,6 +747,7 @@ function App() {
             dateTo={dateTo}
             disabled={loading}
             results={filteredResults}
+            showBuyerColumn={showBuyerColumn}
           />
         </form>
 
@@ -681,7 +800,7 @@ function App() {
           <table>
             <thead>
               <tr>
-                {TABLE_COLUMNS.map((column) => (
+                {tableColumns.map((column) => (
                   <th className={column.className || ""} key={column.key}>
                     <span className="column-title">{column.label}</span>
 
@@ -776,6 +895,12 @@ function App() {
                       </td>
                     ) : null}
 
+                    {showBuyerColumn && rowIndex === 0 ? (
+                      <td className="buyer-cell" rowSpan={procedure.rows.length}>
+                        {procedure.buyerUnit}
+                      </td>
+                    ) : null}
+
                     <td>
                       {row.lotNumber ? (
                         <label className="lot-check">
@@ -801,8 +926,6 @@ function App() {
                       {formatMoney(row.expectedAmount, row.expectedCurrency)}
                     </td>
 
-                    <td>{formatDate(row.contractDate)}</td>
-
                     <td>
                       {formatMoney(row.contractAmount, row.contractCurrency)}
                     </td>
@@ -811,7 +934,7 @@ function App() {
 
                     <td className="supplier-cell">{row.supplierName}</td>
 
-                    <td className="status-cell">
+                    <td>
                       {row.quantity ? (
                         <>
                           {row.quantity}
@@ -826,7 +949,7 @@ function App() {
 
                     <td>{row.contractNumber}</td>
 
-                    <td>
+                    <td className="status-cell">
                       <div
                         className={`status-badge status-badge-${procedure.tenderStatusTone}`}
                       >
