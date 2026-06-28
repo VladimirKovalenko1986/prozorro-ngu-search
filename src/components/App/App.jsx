@@ -328,6 +328,16 @@ function getLotAndSpecificationLabel(row) {
   return parts.join(" | ") || "Без лотів";
 }
 
+function getCalculatedContractTotal(rows) {
+  const total = rows.reduce(
+    (sum, row) =>
+      sum + (row.specificationTitle ? toNumber(row.contractAmount) || 0 : 0),
+    0,
+  );
+
+  return total || null;
+}
+
 function getBuyerName(details, item) {
   return (
     details.procuringEntity?.name ||
@@ -994,6 +1004,8 @@ function App() {
                   const hasSpecificationRows = procedure.rows.some(
                     (row) => row.specificationTitle,
                   );
+                  const calculatedContractTotal =
+                    getCalculatedContractTotal(procedure.rows);
                   const totalColSpan = tableColumns.length - 4;
 
                   return (
@@ -1156,16 +1168,30 @@ function App() {
                       })}
 
                       {hasSpecificationRows ? (
-                        <tr className="contract-total-row">
-                          <td colSpan={totalColSpan}>Сума договору</td>
-                          <td>
-                            {formatMoney(
-                              procedure.rows[0]?.contractTotalAmount,
-                              procedure.rows[0]?.contractCurrency,
-                            )}
-                          </td>
-                          <td colSpan="3" />
-                        </tr>
+                        <>
+                          <tr className="contract-total-row">
+                            <td colSpan={totalColSpan}>
+                              Сума договору за API
+                            </td>
+                            <td>
+                              {formatMoney(
+                                procedure.rows[0]?.contractTotalAmount,
+                                procedure.rows[0]?.contractCurrency,
+                              )}
+                            </td>
+                            <td colSpan="3" />
+                          </tr>
+                          <tr className="contract-total-row contract-total-row-fact">
+                            <td colSpan={totalColSpan}>Сума по факту</td>
+                            <td>
+                              {formatMoney(
+                                calculatedContractTotal,
+                                procedure.rows[0]?.contractCurrency,
+                              )}
+                            </td>
+                            <td colSpan="3" />
+                          </tr>
+                        </>
                       ) : null}
                     </Fragment>
                   );

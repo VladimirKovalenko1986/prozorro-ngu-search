@@ -47,27 +47,86 @@ function getLotAndSpecificationLabel(row) {
   return parts.join(" | ");
 }
 
+function getCalculatedContractTotal(rows) {
+  const total = rows.reduce(
+    (sum, row) => sum + (row.specificationTitle ? row.contractAmount || 0 : 0),
+    0,
+  );
+
+  return total || null;
+}
+
 function buildExcelRows(results, showBuyerColumn) {
   return results.flatMap((procedure) =>
-    procedure.rows.map((row) => [
-      procedure.title,
-      procedure.procedureType,
-      ...(showBuyerColumn ? [procedure.buyerUnit] : []),
-      procedure.tenderID,
-      formatDate(procedure.procedureDate),
-      getLotAndSpecificationLabel(row),
-      formatMoney(row.expectedAmount, row.expectedCurrency),
-      row.supplierName,
-      formatQuantity(row.quantity),
-      row.unitName,
-      formatMoney(row.unitPrice, row.contractCurrency),
-      formatMoney(row.contractAmount, row.contractCurrency),
-      formatDate(row.dateSigned),
-      row.contractNumber,
-      procedure.tenderStatus,
-      row.contractStatus,
-      row.awardStatus,
-    ]),
+    [
+      ...procedure.rows.map((row) => [
+        procedure.title,
+        procedure.procedureType,
+        ...(showBuyerColumn ? [procedure.buyerUnit] : []),
+        procedure.tenderID,
+        formatDate(procedure.procedureDate),
+        getLotAndSpecificationLabel(row),
+        formatMoney(row.expectedAmount, row.expectedCurrency),
+        row.supplierName,
+        formatQuantity(row.quantity),
+        row.unitName,
+        formatMoney(row.unitPrice, row.contractCurrency),
+        formatMoney(row.contractAmount, row.contractCurrency),
+        formatDate(row.dateSigned),
+        row.contractNumber,
+        procedure.tenderStatus,
+        row.contractStatus,
+        row.awardStatus,
+      ]),
+      ...(procedure.rows.some((row) => row.specificationTitle)
+        ? [
+            [
+              "Сума договору за API",
+              "",
+              ...(showBuyerColumn ? [""] : []),
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              formatMoney(
+                procedure.rows[0]?.contractTotalAmount,
+                procedure.rows[0]?.contractCurrency,
+              ),
+              "",
+              "",
+              "",
+              "",
+              "",
+            ],
+            [
+              "Сума по факту",
+              "",
+              ...(showBuyerColumn ? [""] : []),
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              formatMoney(
+                getCalculatedContractTotal(procedure.rows),
+                procedure.rows[0]?.contractCurrency,
+              ),
+              "",
+              "",
+              "",
+              "",
+              "",
+            ],
+          ]
+        : []),
+    ],
   );
 }
 

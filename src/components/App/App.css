@@ -338,9 +338,14 @@ td span {
 
 .contract-total-row td {
   background: #f8fafc;
-  border-bottom: 2px solid #dce3ea;
+  border-bottom: 1px solid #dce3ea;
   color: #17202a;
   font-weight: 800;
+}
+
+.contract-total-row-fact td {
+  background: #eef8f1;
+  border-bottom: 2px solid #bde7c9;
 }
 
 .contract-total-row td:first-child {
