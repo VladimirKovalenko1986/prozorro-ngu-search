@@ -8,7 +8,7 @@ function getColumns(showBuyerColumn) {
     ...(showBuyerColumn ? ["Замовник"] : []),
     "Процедура",
     "Дата процедури",
-    "Лот",
+    "Лот / специфікація",
     "Очікувана / початкова вартість",
     "Сума договору",
     "Ціна за одиницю",
@@ -31,6 +31,20 @@ function escapeCell(value) {
     .replaceAll('"', "&quot;");
 }
 
+function getLotAndSpecificationLabel(row) {
+  const parts = [];
+
+  if (row.lotNumber) {
+    parts.push(`Лот ${row.lotNumber}. ${row.lotTitle}`);
+  }
+
+  if (row.specificationTitle) {
+    parts.push(`Специфікація: ${row.specificationTitle}`);
+  }
+
+  return parts.join(" | ");
+}
+
 function buildExcelRows(results, showBuyerColumn) {
   return results.flatMap((procedure) =>
     procedure.rows.map((row) => [
@@ -38,7 +52,7 @@ function buildExcelRows(results, showBuyerColumn) {
       ...(showBuyerColumn ? [procedure.buyerUnit] : []),
       procedure.tenderID,
       formatDate(procedure.procedureDate),
-      row.lotNumber ? `Лот ${row.lotNumber}. ${row.lotTitle}` : "",
+      getLotAndSpecificationLabel(row),
       formatMoney(row.expectedAmount, row.expectedCurrency),
       formatMoney(row.contractAmount, row.contractCurrency),
       formatMoney(row.unitPrice, row.contractCurrency),

@@ -354,6 +354,15 @@ td span {
   opacity: 0.5;
 }
 
+.specification-title {
+  margin-top: 10px;
+}
+
+.specification-title strong {
+  display: block;
+  color: #17202a;
+}
+
 .procedure-cell a {
   display: block;
   margin-top: 10px;

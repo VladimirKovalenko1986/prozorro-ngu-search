@@ -122,7 +122,7 @@ const STATUS_LABELS = {
 const TABLE_COLUMNS = [
   { key: "title", label: "Предмет закупівлі" },
   { key: "buyerUnit", label: "Замовник", className: "buyer-column" },
-  { key: "lot", label: "Лоти" },
+  { key: "lot", label: "Лоти / специфікація" },
   { key: "expectedAmount", label: "Очікувана / початкова вартість" },
   { key: "contractAmount", label: "Сума договору" },
   { key: "unitPrice", label: "Ціна за одиницю" },
@@ -224,10 +224,56 @@ function getUnitName(items = []) {
   return "";
 }
 
+function getItemUnitName(item) {
+  return item?.unit?.name || "";
+}
+
+function getItemUnitPrice(item) {
+  return (
+    item?.unit?.value?.amount ||
+    item?.unit?.value?.value ||
+    item?.value?.amount ||
+    null
+  );
+}
+
+function getItemDescription(item) {
+  return item?.description || item?.title || "";
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function isSameSpecificationTitle(specTitle, titles) {
+  const normalizedSpec = normalizeText(specTitle);
+
+  if (!normalizedSpec) return true;
+
+  return titles.some((title) => normalizeText(title) === normalizedSpec);
+}
+
 function getQuantityLabel(row) {
   if (!row.quantity) return "Немає кількості";
 
   return row.unitName ? `${row.quantity} ${row.unitName}` : String(row.quantity);
+}
+
+function getLotAndSpecificationLabel(row) {
+  const parts = [];
+
+  if (row.lotNumber) {
+    parts.push(`Лот ${row.lotNumber}. ${row.lotTitle}`);
+  }
+
+  if (row.specificationTitle) {
+    parts.push(`Специфікація: ${row.specificationTitle}`);
+  }
+
+  return parts.join(" | ") || "Без лотів";
 }
 
 function getBuyerName(details, item) {
@@ -312,6 +358,12 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
   const contractItems = contractDetails?.items?.length
     ? contractDetails.items
     : lotItems;
+  const lotTitle = lot && lotsCount > 1
+    ? getLotTitle(lot, lotItems, contractDetails, contract)
+    : "";
+  const specificationItems = contractDetails?.items?.length
+    ? contractDetails.items
+    : [];
   const quantity = getTotalQuantity(contractItems);
   const expected = getLotExpectedValue(details, lot);
   const contractValue = getContractValue(contractDetails, contract);
@@ -321,22 +373,15 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
     ? "success"
     : getStatusTone(contractStatus);
 
-  return {
-    id: `${details.id}-${lot?.id || contract?.id || lotIndex}`,
+  const baseRow = {
     lotNumber: lot && lotsCount > 1 ? lotIndex + 1 : null,
-    lotTitle:
-      lot && lotsCount > 1
-        ? getLotTitle(lot, lotItems, contractDetails, contract)
-        : "",
-    quantity: quantity || null,
+    lotTitle,
     unitName: getUnitName(contractItems),
     supplierName: supplier?.name || "Немає контрагента",
     expectedAmount: expected.amount,
     expectedCurrency: expected.currency,
     contractAmount: contractValue.amount,
     contractCurrency: contractValue.currency,
-    unitPrice:
-      contractValue.amount && quantity ? contractValue.amount / quantity : null,
     contractNumber: getContractNumber(contractDetails, contract),
     dateSigned: getContractSignedDate(contractDetails, contract),
     contractStatus: statusLabel(contractStatus),
@@ -344,6 +389,45 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
     awardStatus: statusLabel(award?.status),
     awardStatusTone: getStatusTone(award?.status),
   };
+
+  const visibleSpecificationItems = specificationItems.filter((item) => {
+    const specTitle = getItemDescription(item);
+
+    return (
+      specificationItems.length > 1 ||
+      !isSameSpecificationTitle(specTitle, [
+        lotTitle,
+        details.title,
+        lotItems[0]?.description,
+      ])
+    );
+  });
+
+  if (visibleSpecificationItems.length > 0) {
+    return visibleSpecificationItems.map((item, itemIndex) => {
+      const itemQuantity = Number(item.quantity || 0);
+
+      return {
+        ...baseRow,
+        id: `${details.id}-${lot?.id || contract?.id || lotIndex}-${item.id || itemIndex}`,
+        specificationTitle: getItemDescription(item),
+        quantity: itemQuantity || null,
+        unitName: getItemUnitName(item),
+        unitPrice: getItemUnitPrice(item),
+      };
+    });
+  }
+
+  return [
+    {
+      ...baseRow,
+      id: `${details.id}-${lot?.id || contract?.id || lotIndex}`,
+      specificationTitle: "",
+      quantity: quantity || null,
+      unitPrice:
+        contractValue.amount && quantity ? contractValue.amount / quantity : null,
+    },
+  ];
 }
 
 function wait(ms) {
@@ -430,7 +514,7 @@ function buildProcedureResult(details, item, lotRows) {
 function getFilterValue(procedure, row, key) {
   const values = {
     title: procedure.title,
-    lot: row.lotNumber ? `Лот ${row.lotNumber}. ${row.lotTitle}` : "Без лотів",
+    lot: getLotAndSpecificationLabel(row),
     expectedAmount: formatMoney(row.expectedAmount, row.expectedCurrency),
     contractAmount: formatMoney(row.contractAmount, row.contractCurrency),
     unitPrice: formatMoney(row.unitPrice, row.contractCurrency),
@@ -656,7 +740,7 @@ function App() {
               const contractDetails = await fetchContractDetails(contract?.id);
 
               lotRows.push(
-                buildLotRow(
+                ...buildLotRow(
                   details,
                   lot,
                   lotIndex,
@@ -902,9 +986,9 @@ function App() {
                     ) : null}
 
                     <td>
-                      {row.lotNumber ? (
+                      {row.lotNumber || row.specificationTitle ? (
                         <label className="lot-check">
-                          {hasMultipleLots ? (
+                          {row.lotNumber && hasMultipleLots ? (
                             <input
                               checked={isLotChecked}
                               disabled={isProcedureChecked}
@@ -913,8 +997,18 @@ function App() {
                             />
                           ) : null}
                           <span>
-                            <strong>Лот {row.lotNumber}</strong>
-                            <span>{row.lotTitle}</span>
+                            {row.lotNumber ? (
+                              <>
+                                <strong>Лот {row.lotNumber}</strong>
+                                <span>{row.lotTitle}</span>
+                              </>
+                            ) : null}
+                            {row.specificationTitle ? (
+                              <span className="specification-title">
+                                <strong>Специфікація</strong>
+                                <span>{row.specificationTitle}</span>
+                              </span>
+                            ) : null}
                           </span>
                         </label>
                       ) : (
