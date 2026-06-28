@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   fetchContractDetails,
   fetchTenderSearchPage,
@@ -143,10 +143,10 @@ const TABLE_COLUMNS = [
   { key: "buyerUnit", label: "Замовник", className: "buyer-column" },
   { key: "lot", label: "Лоти / специфікація" },
   { key: "expectedAmount", label: "Очікувана / початкова вартість" },
-  { key: "contractAmount", label: "Сума договору" },
-  { key: "unitPrice", label: "Ціна за одиницю" },
   { key: "supplier", label: "Контрагент", className: "supplier-column" },
   { key: "quantity", label: "Кількість / одиниця" },
+  { key: "unitPrice", label: "Ціна за одиницю" },
+  { key: "contractAmount", label: "Сума договору" },
   { key: "dateSigned", label: "Дата підписання" },
   { key: "contractNumber", label: "Номер договору" },
   { key: "status", label: "Статус", className: "status-column" },
@@ -251,13 +251,39 @@ function getItemUnitName(item) {
   return item?.unit?.name || "";
 }
 
+function toNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (value === null || value === undefined || value === "") return null;
+
+  const normalized = String(value)
+    .replace(/\s/g, "")
+    .replace(",", ".");
+  const number = Number(normalized);
+
+  return Number.isFinite(number) ? number : null;
+}
+
 function getItemUnitPrice(item) {
-  return (
+  return toNumber(
     item?.unit?.value?.amount ||
     item?.unit?.value?.value ||
     item?.value?.amount ||
-    null
+    null,
   );
+}
+
+function getSpecificationAmount(quantity, unitPrice) {
+  if (!quantity || !unitPrice) return null;
+
+  const amount = toNumber(quantity) * toNumber(unitPrice);
+
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function addVat(amount) {
+  const number = toNumber(amount);
+
+  return number ? number * 1.2 : null;
 }
 
 function getItemDescription(item) {
@@ -404,6 +430,7 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
     expectedAmount: expected.amount,
     expectedCurrency: expected.currency,
     contractAmount: contractValue.amount,
+    contractTotalAmount: contractValue.amount,
     contractCurrency: contractValue.currency,
     contractNumber: getContractNumber(contractDetails, contract),
     dateSigned: getContractSignedDate(contractDetails, contract),
@@ -428,15 +455,17 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
 
   if (visibleSpecificationItems.length > 0) {
     return visibleSpecificationItems.map((item, itemIndex) => {
-      const itemQuantity = Number(item.quantity || 0);
+      const itemQuantity = toNumber(item.quantity);
+      const itemUnitPrice = addVat(getItemUnitPrice(item));
 
       return {
         ...baseRow,
         id: `${details.id}-${lot?.id || contract?.id || lotIndex}-${item.id || itemIndex}`,
         specificationTitle: getItemDescription(item),
-        quantity: itemQuantity || null,
+        quantity: itemQuantity,
         unitName: getItemUnitName(item),
-        unitPrice: getItemUnitPrice(item),
+        contractAmount: getSpecificationAmount(itemQuantity, itemUnitPrice),
+        unitPrice: itemUnitPrice,
       };
     });
   }
@@ -958,146 +987,186 @@ function App() {
 
             <tbody>
               {filteredResults.map((procedure) =>
-                procedure.rows.map((row, rowIndex) => {
-                  const isProcedureChecked = Boolean(
-                    checkedProcedures[procedure.tenderID],
+                {
+                  const hasSpecificationRows = procedure.rows.some(
+                    (row) => row.specificationTitle,
                   );
-                  const isLotChecked = Boolean(checkedLots[row.id]);
-                  const isChecked = isProcedureChecked || isLotChecked;
-                  const hasMultipleLots = procedure.rows.length > 1;
-                  const isRecentlyAdded =
-                    procedure.id === recentlyAddedProcedureId;
+                  const totalColSpan = tableColumns.length - 4;
 
                   return (
-                  <tr
-                    className={[
-                      isChecked ? "processed-row" : "",
-                      isRecentlyAdded ? "row-added" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    key={row.id}
-                  >
-                    {rowIndex === 0 ? (
-                      <td
-                        className="procedure-cell"
-                        rowSpan={procedure.rows.length}
-                      >
-                        <label className="processed-check">
-                          <input
-                            checked={isProcedureChecked}
-                            onChange={() =>
-                              toggleProcedureChecked(procedure.tenderID)
-                            }
-                            type="checkbox"
-                          />
-                          <strong>{procedure.title}</strong>
-                        </label>
-                        <a
-                          href={`https://prozorro.gov.ua/tender/${procedure.tenderID}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {procedure.tenderID}
-                        </a>
-                        <span>Дата процедури: {formatDate(procedure.procedureDate)}</span>
-                        <span>Статус: {procedure.tenderStatus}</span>
-                      </td>
-                    ) : null}
+                    <Fragment key={procedure.id}>
+                      {procedure.rows.map((row, rowIndex) => {
+                        const isProcedureChecked = Boolean(
+                          checkedProcedures[procedure.tenderID],
+                        );
+                        const isLotChecked = Boolean(checkedLots[row.id]);
+                        const isChecked = isProcedureChecked || isLotChecked;
+                        const hasMultipleLots = procedure.rows.length > 1;
+                        const isRecentlyAdded =
+                          procedure.id === recentlyAddedProcedureId;
 
-                    {rowIndex === 0 ? (
-                      <td
-                        className="procedure-type-cell"
-                        rowSpan={procedure.rows.length}
-                      >
-                        {procedure.procedureType}
-                      </td>
-                    ) : null}
-
-                    {showBuyerColumn && rowIndex === 0 ? (
-                      <td className="buyer-cell" rowSpan={procedure.rows.length}>
-                        {procedure.buyerUnit}
-                      </td>
-                    ) : null}
-
-                    <td>
-                      {row.lotNumber || row.specificationTitle ? (
-                        <label className="lot-check">
-                          {row.lotNumber && hasMultipleLots ? (
-                            <input
-                              checked={isLotChecked}
-                              disabled={isProcedureChecked}
-                              onChange={() => toggleLotChecked(row.id)}
-                              type="checkbox"
-                            />
-                          ) : null}
-                          <span>
-                            {row.lotNumber ? (
-                              <>
-                                <strong>Лот {row.lotNumber}</strong>
-                                <span>{row.lotTitle}</span>
-                              </>
+                        return (
+                          <tr
+                            className={[
+                              isChecked ? "processed-row" : "",
+                              isRecentlyAdded ? "row-added" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            key={row.id}
+                          >
+                            {rowIndex === 0 ? (
+                              <td
+                                className="procedure-cell"
+                                rowSpan={procedure.rows.length}
+                              >
+                                <label className="processed-check">
+                                  <input
+                                    checked={isProcedureChecked}
+                                    onChange={() =>
+                                      toggleProcedureChecked(procedure.tenderID)
+                                    }
+                                    type="checkbox"
+                                  />
+                                  <strong>{procedure.title}</strong>
+                                </label>
+                                <a
+                                  href={`https://prozorro.gov.ua/tender/${procedure.tenderID}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {procedure.tenderID}
+                                </a>
+                                <span>
+                                  Дата процедури:{" "}
+                                  {formatDate(procedure.procedureDate)}
+                                </span>
+                                <span>Статус: {procedure.tenderStatus}</span>
+                              </td>
                             ) : null}
-                            {row.specificationTitle ? (
-                              <span className="specification-title">
-                                <strong>Специфікація</strong>
-                                <span>{row.specificationTitle}</span>
+
+                            {rowIndex === 0 ? (
+                              <td
+                                className="procedure-type-cell"
+                                rowSpan={procedure.rows.length}
+                              >
+                                {procedure.procedureType}
+                              </td>
+                            ) : null}
+
+                            {showBuyerColumn && rowIndex === 0 ? (
+                              <td
+                                className="buyer-cell"
+                                rowSpan={procedure.rows.length}
+                              >
+                                {procedure.buyerUnit}
+                              </td>
+                            ) : null}
+
+                            <td>
+                              {row.lotNumber || row.specificationTitle ? (
+                                <label className="lot-check">
+                                  {row.lotNumber && hasMultipleLots ? (
+                                    <input
+                                      checked={isLotChecked}
+                                      disabled={isProcedureChecked}
+                                      onChange={() => toggleLotChecked(row.id)}
+                                      type="checkbox"
+                                    />
+                                  ) : null}
+                                  <span>
+                                    {row.lotNumber ? (
+                                      <>
+                                        <strong>Лот {row.lotNumber}</strong>
+                                        <span>{row.lotTitle}</span>
+                                      </>
+                                    ) : null}
+                                    {row.specificationTitle ? (
+                                      <span className="specification-title">
+                                        <strong>Специфікація</strong>
+                                        <span>{row.specificationTitle}</span>
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                </label>
+                              ) : (
+                                ""
+                              )}
+                            </td>
+
+                            <td>
+                              {formatMoney(
+                                row.expectedAmount,
+                                row.expectedCurrency,
+                              )}
+                            </td>
+
+                            <td className="supplier-cell">{row.supplierName}</td>
+
+                            <td>
+                              {row.quantity ? (
+                                <>
+                                  {row.quantity}
+                                  {row.unitName ? (
+                                    <span> {row.unitName}</span>
+                                  ) : null}
+                                </>
+                              ) : (
+                                "Немає кількості"
+                              )}
+                            </td>
+
+                            <td>
+                              {formatMoney(row.unitPrice, row.contractCurrency)}
+                            </td>
+
+                            <td>
+                              {formatMoney(
+                                row.contractAmount,
+                                row.contractCurrency,
+                              )}
+                            </td>
+
+                            <td>{formatDate(row.dateSigned)}</td>
+
+                            <td>{row.contractNumber}</td>
+
+                            <td className="status-cell">
+                              <div
+                                className={`status-badge status-badge-${procedure.tenderStatusTone}`}
+                              >
+                                {procedure.tenderStatus}
+                              </div>
+                              <span
+                                className={`status-badge status-badge-${row.contractStatusTone}`}
+                              >
+                                Договір: {row.contractStatus}
                               </span>
-                            ) : null}
-                          </span>
-                        </label>
-                      ) : (
-                        ""
-                      )}
-                    </td>
+                              <span
+                                className={`status-badge status-badge-${row.awardStatusTone}`}
+                              >
+                                Award: {row.awardStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
 
-                    <td>
-                      {formatMoney(row.expectedAmount, row.expectedCurrency)}
-                    </td>
-
-                    <td>
-                      {formatMoney(row.contractAmount, row.contractCurrency)}
-                    </td>
-
-                    <td>{formatMoney(row.unitPrice, row.contractCurrency)}</td>
-
-                    <td className="supplier-cell">{row.supplierName}</td>
-
-                    <td>
-                      {row.quantity ? (
-                        <>
-                          {row.quantity}
-                          {row.unitName ? <span> {row.unitName}</span> : null}
-                        </>
-                      ) : (
-                        "Немає кількості"
-                      )}
-                    </td>
-
-                    <td>{formatDate(row.dateSigned)}</td>
-
-                    <td>{row.contractNumber}</td>
-
-                    <td className="status-cell">
-                      <div
-                        className={`status-badge status-badge-${procedure.tenderStatusTone}`}
-                      >
-                        {procedure.tenderStatus}
-                      </div>
-                      <span
-                        className={`status-badge status-badge-${row.contractStatusTone}`}
-                      >
-                        Договір: {row.contractStatus}
-                      </span>
-                      <span
-                        className={`status-badge status-badge-${row.awardStatusTone}`}
-                      >
-                        Award: {row.awardStatus}
-                      </span>
-                    </td>
-                  </tr>
+                      {hasSpecificationRows ? (
+                        <tr className="contract-total-row">
+                          <td colSpan={totalColSpan}>Сума договору</td>
+                          <td>
+                            {formatMoney(
+                              procedure.rows[0]?.contractTotalAmount,
+                              procedure.rows[0]?.contractCurrency,
+                            )}
+                          </td>
+                          <td colSpan="3" />
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   );
-                }),
+                },
               )}
             </tbody>
           </table>

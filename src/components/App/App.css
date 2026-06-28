@@ -336,6 +336,17 @@ td span {
   animation: row-add 900ms ease-out;
 }
 
+.contract-total-row td {
+  background: #f8fafc;
+  border-bottom: 2px solid #dce3ea;
+  color: #17202a;
+  font-weight: 800;
+}
+
+.contract-total-row td:first-child {
+  text-align: right;
+}
+
 .processed-check {
   display: flex;
   align-items: flex-start;
