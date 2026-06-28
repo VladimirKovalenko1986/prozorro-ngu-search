@@ -7,6 +7,7 @@ import {
 } from "../../services/prozorroApi.js";
 import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
+import { formatQuantity } from "../../utils/formatQuantity.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import "./App.css";
@@ -308,7 +309,9 @@ function isSameSpecificationTitle(specTitle, titles) {
 function getQuantityLabel(row) {
   if (!row.quantity) return "Немає кількості";
 
-  return row.unitName ? `${row.quantity} ${row.unitName}` : String(row.quantity);
+  return row.unitName
+    ? `${formatQuantity(row.quantity)} ${row.unitName}`
+    : formatQuantity(row.quantity);
 }
 
 function getLotAndSpecificationLabel(row) {
@@ -1106,7 +1109,7 @@ function App() {
                             <td>
                               {row.quantity ? (
                                 <>
-                                  {row.quantity}
+                                  {formatQuantity(row.quantity)}
                                   {row.unitName ? (
                                     <span> {row.unitName}</span>
                                   ) : null}

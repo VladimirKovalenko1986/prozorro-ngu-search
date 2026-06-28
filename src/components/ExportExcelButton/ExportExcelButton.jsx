@@ -1,5 +1,6 @@
 import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
+import { formatQuantity } from "../../utils/formatQuantity.js";
 import css from "./ExportExcelButton.module.css";
 
 function getColumns(showBuyerColumn) {
@@ -57,7 +58,7 @@ function buildExcelRows(results, showBuyerColumn) {
       getLotAndSpecificationLabel(row),
       formatMoney(row.expectedAmount, row.expectedCurrency),
       row.supplierName,
-      row.quantity || "Немає кількості",
+      formatQuantity(row.quantity),
       row.unitName,
       formatMoney(row.unitPrice, row.contractCurrency),
       formatMoney(row.contractAmount, row.contractCurrency),
