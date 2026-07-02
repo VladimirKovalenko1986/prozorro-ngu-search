@@ -32,12 +32,25 @@ async function fetchJson(url, options) {
   return response.json();
 }
 
+function addOneDay(dateValue) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  date.setDate(date.getDate() + 1);
+
+  const nextYear = date.getFullYear();
+  const nextMonth = String(date.getMonth() + 1).padStart(2, "0");
+  const nextDay = String(date.getDate()).padStart(2, "0");
+
+  return `${nextYear}-${nextMonth}-${nextDay}`;
+}
+
 export async function fetchTenderSearchPage({ edrpou, dateFrom, dateTo, page }) {
   const params = new URLSearchParams();
 
   params.append("buyer[]", edrpou);
   params.append("date[tender][start]", dateFrom);
-  params.append("date[tender][end]", dateTo);
+  params.append("date[tender][end]", addOneDay(dateTo));
   params.append("page", String(page));
 
   return fetchJson(`${SITE_API_PREFIX}/search/tenders?${params}`, {

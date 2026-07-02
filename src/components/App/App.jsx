@@ -507,6 +507,23 @@ function formatInputDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+function addDays(dateValue, days) {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  date.setDate(date.getDate() + days);
+
+  return formatInputDate(date);
+}
+
+function normalizeDateRange(firstDate, secondDate) {
+  if (firstDate <= secondDate) {
+    return { dateFrom: firstDate, dateTo: secondDate };
+  }
+
+  return { dateFrom: secondDate, dateTo: firstDate };
+}
+
 function getDefaultDateFrom() {
   const today = new Date();
 
@@ -527,8 +544,7 @@ function buildFallbackDetails(searchItem) {
     value: searchItem.value,
     procuringEntity: searchItem.procuringEntity,
     buyer: searchItem.buyer,
-    dateCreated:
-      searchItem.tenderPeriod?.startDate || searchItem.dateCreated || null,
+    dateCreated: searchItem.dateCreated || getDateFromTenderId(searchItem.tenderID),
     tenderPeriod: searchItem.tenderPeriod || {},
     items: [],
     lots: [],
@@ -552,7 +568,9 @@ async function fetchFullTenderDetails(searchItem) {
     return {
       ...summary,
       dateCreated:
-        summary.tenderPeriod?.startDate || searchItem.tenderPeriod?.startDate,
+        summary.dateCreated ||
+        searchItem.dateCreated ||
+        getDateFromTenderId(summary.tenderID || searchItem.tenderID),
       items: [],
       lots: [],
       awards: [],
@@ -561,8 +579,24 @@ async function fetchFullTenderDetails(searchItem) {
   }
 }
 
+function getDateFromTenderId(tenderID) {
+  const match = tenderID?.match(/^UA-(\d{4})-(\d{2})-(\d{2})-/);
+
+  if (!match) return null;
+
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function getProcedureDate(details, item) {
+  return (
+    details.dateCreated ||
+    item.dateCreated ||
+    getDateFromTenderId(details.tenderID || item.tenderID)
+  );
+}
+
 function buildProcedureResult(details, item, lotRows) {
-  const procedureDate = details.dateCreated || item.dateCreated;
+  const procedureDate = getProcedureDate(details, item);
   const tenderStatus = details.status || item.status;
   const procedureType = details.procurementMethodType || item.procurementMethodType;
 
@@ -742,6 +776,8 @@ function App() {
     event.preventDefault();
 
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
+    const searchRange = normalizeDateRange(dateFrom, dateTo);
+    const apiDateTo = addDays(searchRange.dateTo, 45);
 
     if (!buyer?.edrpous?.length) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
@@ -768,8 +804,8 @@ function App() {
         while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
           const json = await fetchTenderSearchPage({
             edrpou,
-            dateFrom,
-            dateTo,
+            dateFrom: searchRange.dateFrom,
+            dateTo: apiDateTo,
             page,
           });
           const rows = json.data || [];
@@ -792,9 +828,9 @@ function App() {
             );
 
             const details = await fetchFullTenderDetails(item);
-            const procedureDate = details.dateCreated || item.dateCreated;
+            const procedureDate = getProcedureDate(details, item);
 
-            if (!isDateInPeriod(procedureDate, dateFrom, dateTo)) {
+            if (!isDateInPeriod(procedureDate, searchRange.dateFrom, searchRange.dateTo)) {
               await wait(TENDER_REQUEST_DELAY_MS);
               continue;
             }
@@ -837,7 +873,7 @@ function App() {
       }
 
       setStatus(
-        `Готово. Показано процедур: ${found.length}. API знайшов ${total} за тендерним періодом ${dateFrom} - ${dateTo}`,
+        `Готово. Показано процедур: ${found.length}. API знайшов ${total}. Дата процедури: ${searchRange.dateFrom} - ${searchRange.dateTo}`,
       );
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
