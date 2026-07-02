@@ -384,11 +384,25 @@ td span {
 
 .specification-title {
   margin-top: 10px;
+  white-space: pre-line;
 }
 
 .specification-title strong {
   display: block;
   color: #17202a;
+}
+
+.specification-quantities {
+  display: block;
+  margin-top: 46px;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.specification-quantities span {
+  display: block;
 }
 
 .procedure-cell a {

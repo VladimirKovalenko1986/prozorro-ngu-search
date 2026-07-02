@@ -104,7 +104,7 @@ const BUYERS = [
 ];
 
 const MAX_SEARCH_PAGES = 100;
-const TENDER_REQUEST_DELAY_MS = 700;
+const TENDER_REQUEST_DELAY_MS = 250;
 const ADD_ROW_ANIMATION_MS = 450;
 const STORAGE_KEYS = {
   procedures: "prozorro-ngu-checked-procedures",
@@ -210,19 +210,47 @@ function getRelatedLotId(entity) {
 }
 
 function findAwardForLot(details, lot) {
-  if (!lot) return details.awards?.[0];
+  const awards = lot
+    ? details.awards?.filter((award) => getRelatedLotId(award) === lot.id)
+    : details.awards;
 
-  return details.awards?.find((award) => getRelatedLotId(award) === lot.id);
+  if (!awards?.length) return null;
+
+  return (
+    awards.find((award) => award.status === "active") ||
+    awards.find(
+      (award) => award.status !== "unsuccessful" && award.status !== "cancelled",
+    ) ||
+    awards[0]
+  );
 }
 
 function findContractForLot(details, lot, award) {
   if (!details.contracts?.length) return null;
 
+  const contractByAward = details.contracts.find(
+    (contract) => contract.awardID === award?.id,
+  );
+
+  if (contractByAward) return contractByAward;
+
+  if (lot) {
+    const lotAwardIds = new Set(
+      details.awards
+        ?.filter((item) => getRelatedLotId(item) === lot.id)
+        .map((item) => item.id) || [],
+    );
+
+    return (
+      details.contracts.find(
+        (contract) => lot.id && getRelatedLotId(contract) === lot.id,
+      ) ||
+      details.contracts.find((contract) => lotAwardIds.has(contract.awardID)) ||
+      null
+    );
+  }
+
   return (
-    details.contracts.find(
-      (contract) => lot?.id && getRelatedLotId(contract) === lot.id,
-    ) ||
-    details.contracts.find((contract) => contract.awardID === award?.id) ||
     details.contracts[0]
   );
 }
@@ -289,6 +317,25 @@ function addVat(amount) {
 
 function getItemDescription(item) {
   return item?.description || item?.title || "";
+}
+
+function getSpecificationTitle(items) {
+  return items
+    .map((item, index) => `${index + 1}. ${getItemDescription(item)}`)
+    .join("\n");
+}
+
+function getSpecificationQuantities(items) {
+  return items
+    .map((item, index) => {
+      const quantity = toNumber(item.quantity);
+      const unitName = getItemUnitName(item);
+
+      if (!quantity) return null;
+
+      return `${index + 1}. ${formatQuantity(quantity)}${unitName ? ` ${unitName}` : ""}`;
+    })
+    .filter(Boolean);
 }
 
 function normalizeText(value) {
@@ -413,10 +460,16 @@ function getSupplier(contractDetails, contract, award) {
   );
 }
 
-function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
+function buildLotRow(
+  details,
+  lot,
+  lotIndex,
+  lotsCount,
+  award,
+  contract,
+  contractDetails,
+) {
   const lotItems = getLotItems(details, lot);
-  const award = findAwardForLot(details, lot);
-  const contract = findContractForLot(details, lot, award);
   const contractItems = contractDetails?.items?.length
     ? contractDetails.items
     : lotItems;
@@ -467,9 +520,33 @@ function buildLotRow(details, lot, lotIndex, lotsCount, contractDetails) {
   });
 
   if (visibleSpecificationItems.length > 0) {
+    const itemUnitPrices = visibleSpecificationItems.map((item) =>
+      addVat(getItemUnitPrice(item)),
+    );
+    const hasAllUnitPrices = itemUnitPrices.every(Boolean);
+
+    if (!hasAllUnitPrices) {
+      return [
+        {
+          ...baseRow,
+          id: `${details.id}-${lot?.id || contract?.id || lotIndex}`,
+          specificationTitle: getSpecificationTitle(visibleSpecificationItems),
+          specificationQuantities: getSpecificationQuantities(
+            visibleSpecificationItems,
+          ),
+          quantity: quantity || null,
+          unitPrice:
+            contractValue.amount && quantity
+              ? contractValue.amount / quantity
+              : null,
+          contractAmount: contractValue.amount,
+        },
+      ];
+    }
+
     return visibleSpecificationItems.map((item, itemIndex) => {
       const itemQuantity = toNumber(item.quantity);
-      const itemUnitPrice = addVat(getItemUnitPrice(item));
+      const itemUnitPrice = itemUnitPrices[itemIndex];
 
       return {
         ...baseRow,
@@ -505,15 +582,6 @@ function formatInputDate(date) {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
-}
-
-function addDays(dateValue, days) {
-  const [year, month, day] = dateValue.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  date.setDate(date.getDate() + days);
-
-  return formatInputDate(date);
 }
 
 function normalizeDateRange(firstDate, secondDate) {
@@ -585,6 +653,10 @@ function getDateFromTenderId(tenderID) {
   if (!match) return null;
 
   return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function getSearchItemProcedureDate(item) {
+  return getDateFromTenderId(item.tenderID) || item.dateCreated?.slice(0, 10) || null;
 }
 
 function getProcedureDate(details, item) {
@@ -777,7 +849,6 @@ function App() {
 
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
     const searchRange = normalizeDateRange(dateFrom, dateTo);
-    const apiDateTo = addDays(searchRange.dateTo, 45);
 
     if (!buyer?.edrpous?.length) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
@@ -794,7 +865,6 @@ function App() {
 
     const found = [];
     const foundTenderIds = new Set();
-    let total = 0;
 
     try {
       for (const [edrpouIndex, edrpou] of buyer.edrpous.entries()) {
@@ -804,22 +874,38 @@ function App() {
         while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
           const json = await fetchTenderSearchPage({
             edrpou,
-            dateFrom: searchRange.dateFrom,
-            dateTo: apiDateTo,
             page,
           });
           const rows = json.data || [];
           const edrpouTotal = json.total || rows.length;
+          const pageProcedureDates = rows
+            .map((item) => getSearchItemProcedureDate(item))
+            .filter(Boolean);
 
-          total += page === 1 ? edrpouTotal : 0;
           totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
 
           setStatus(
-            `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Сторінка ${page} з ${totalPages}. API знайшов: ${edrpouTotal}. Уже показано: ${found.length}`,
+            `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Перевіряю сторінку ${page} з ${totalPages}. Уже показано: ${found.length}`,
           );
+
+          if (
+            pageProcedureDates.length === rows.length &&
+            pageProcedureDates.every((procedureDate) => procedureDate < searchRange.dateFrom)
+          ) {
+            break;
+          }
 
           for (const [itemIndex, item] of rows.entries()) {
             if (foundTenderIds.has(item.tenderID)) {
+              continue;
+            }
+
+            const itemProcedureDate = getSearchItemProcedureDate(item);
+
+            if (
+              itemProcedureDate &&
+              !isDateInPeriod(itemProcedureDate, searchRange.dateFrom, searchRange.dateTo)
+            ) {
               continue;
             }
 
@@ -827,34 +913,61 @@ function App() {
               `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Уже показано: ${found.length}`,
             );
 
-            const details = await fetchFullTenderDetails(item);
-            const procedureDate = getProcedureDate(details, item);
+            let procedureResult;
 
-            if (!isDateInPeriod(procedureDate, searchRange.dateFrom, searchRange.dateTo)) {
-              await wait(TENDER_REQUEST_DELAY_MS);
-              continue;
-            }
+            try {
+              const details = await fetchFullTenderDetails(item);
+              const procedureDate = getProcedureDate(details, item);
 
-            const lots = details.lots?.length ? details.lots : [null];
-            const lotRows = [];
+              if (!isDateInPeriod(procedureDate, searchRange.dateFrom, searchRange.dateTo)) {
+                await wait(TENDER_REQUEST_DELAY_MS);
+                continue;
+              }
 
-            for (const [lotIndex, lot] of lots.entries()) {
-              const award = findAwardForLot(details, lot);
-              const contract = findContractForLot(details, lot, award);
-              const contractDetails = await fetchContractDetails(contract?.id);
+              const lots = details.lots?.length ? details.lots : [null];
+              const lotRows = [];
 
-              lotRows.push(
-                ...buildLotRow(
-                  details,
-                  lot,
-                  lotIndex,
-                  lots.length,
-                  contractDetails,
-                ),
+              for (const [lotIndex, lot] of lots.entries()) {
+                const award = findAwardForLot(details, lot);
+                const contract = findContractForLot(details, lot, award);
+                const contractDetails = await fetchContractDetails(contract?.id);
+
+                lotRows.push(
+                  ...buildLotRow(
+                    details,
+                    lot,
+                    lotIndex,
+                    lots.length,
+                    award,
+                    contract,
+                    contractDetails,
+                  ),
+                );
+              }
+
+              procedureResult = buildProcedureResult(details, item, lotRows);
+            } catch {
+              const fallbackDetails = buildFallbackDetails(item);
+              const fallbackRows = buildLotRow(
+                fallbackDetails,
+                null,
+                0,
+                1,
+                null,
+                null,
+                null,
+              );
+
+              procedureResult = buildProcedureResult(
+                fallbackDetails,
+                item,
+                fallbackRows,
               );
             }
 
-            const procedureResult = buildProcedureResult(details, item, lotRows);
+            if (!procedureResult) {
+              continue;
+            }
 
             setAddingProcedureTitle(procedureResult.title);
             await wait(ADD_ROW_ANIMATION_MS);
@@ -868,12 +981,19 @@ function App() {
             await wait(TENDER_REQUEST_DELAY_MS);
           }
 
+          if (
+            pageProcedureDates.length === rows.length &&
+            pageProcedureDates[pageProcedureDates.length - 1] < searchRange.dateFrom
+          ) {
+            break;
+          }
+
           page += 1;
         }
       }
 
       setStatus(
-        `Готово. Показано процедур: ${found.length}. API знайшов ${total}. Дата процедури: ${searchRange.dateFrom} - ${searchRange.dateTo}`,
+        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}`,
       );
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
@@ -1157,9 +1277,18 @@ function App() {
                             <td>
                               {row.quantity ? (
                                 <>
-                                  {formatQuantity(row.quantity)}
-                                  {row.unitName ? (
-                                    <span> {row.unitName}</span>
+                                  <strong>
+                                    {formatQuantity(row.quantity)}
+                                    {row.unitName ? (
+                                      <span> {row.unitName}</span>
+                                    ) : null}
+                                  </strong>
+                                  {row.specificationQuantities?.length ? (
+                                    <span className="specification-quantities">
+                                      {row.specificationQuantities.map((item) => (
+                                        <span key={item}>{item}</span>
+                                      ))}
+                                    </span>
                                   ) : null}
                                 </>
                               ) : (

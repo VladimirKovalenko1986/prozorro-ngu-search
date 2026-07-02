@@ -56,6 +56,15 @@ function getCalculatedContractTotal(rows) {
   return total || null;
 }
 
+function getQuantityCell(row) {
+  const total = formatQuantity(row.quantity);
+  const details = row.specificationQuantities?.length
+    ? `Специфікація: ${row.specificationQuantities.join("; ")}`
+    : "";
+
+  return [total, details].filter(Boolean).join("\n");
+}
+
 function buildExcelRows(results, showBuyerColumn) {
   return results.flatMap((procedure) =>
     [
@@ -68,7 +77,7 @@ function buildExcelRows(results, showBuyerColumn) {
         getLotAndSpecificationLabel(row),
         formatMoney(row.expectedAmount, row.expectedCurrency),
         row.supplierName,
-        formatQuantity(row.quantity),
+        getQuantityCell(row),
         row.unitName,
         formatMoney(row.unitPrice, row.contractCurrency),
         formatMoney(row.contractAmount, row.contractCurrency),

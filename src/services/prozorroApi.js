@@ -1,12 +1,18 @@
 const DETAILS_API_PREFIX = "/prozorro/api/2.5";
 const SITE_API_PREFIX = "/prozorro-search/api";
+const FETCH_TIMEOUT_MS = 15000;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function fetchWithRetry(url, options = {}, retries = 3) {
-  const response = await fetch(url, options);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const response = await fetch(url, {
+    ...options,
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeoutId));
 
   if (response.status !== 429 || retries === 0) {
     return response;
@@ -32,25 +38,10 @@ async function fetchJson(url, options) {
   return response.json();
 }
 
-function addOneDay(dateValue) {
-  const [year, month, day] = dateValue.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  date.setDate(date.getDate() + 1);
-
-  const nextYear = date.getFullYear();
-  const nextMonth = String(date.getMonth() + 1).padStart(2, "0");
-  const nextDay = String(date.getDate()).padStart(2, "0");
-
-  return `${nextYear}-${nextMonth}-${nextDay}`;
-}
-
-export async function fetchTenderSearchPage({ edrpou, dateFrom, dateTo, page }) {
+export async function fetchTenderSearchPage({ edrpou, page }) {
   const params = new URLSearchParams();
 
   params.append("buyer[]", edrpou);
-  params.append("date[tender][start]", dateFrom);
-  params.append("date[tender][end]", addOneDay(dateTo));
   params.append("page", String(page));
 
   return fetchJson(`${SITE_API_PREFIX}/search/tenders?${params}`, {
@@ -75,13 +66,17 @@ export async function fetchTenderDetails(id) {
 export async function fetchContractDetails(id) {
   if (!id) return null;
 
-  const response = await fetchWithRetry(`${DETAILS_API_PREFIX}/contracts/${id}`);
+  try {
+    const response = await fetchWithRetry(`${DETAILS_API_PREFIX}/contracts/${id}`);
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return null;
+    }
+
+    const json = await response.json();
+
+    return json.data;
+  } catch {
     return null;
   }
-
-  const json = await response.json();
-
-  return json.data;
 }
