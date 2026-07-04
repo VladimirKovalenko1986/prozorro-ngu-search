@@ -774,6 +774,22 @@ function filterResults(results, filters) {
     .filter((procedure) => procedure.rows.length > 0);
 }
 
+function filterResultsByContractNumber(results, contractSearch) {
+  const query = normalizeText(contractSearch);
+
+  if (!query) return results;
+
+  return results
+    .map((procedure) => {
+      const rows = procedure.rows.filter((row) =>
+        normalizeText(row.contractNumber).includes(query),
+      );
+
+      return { ...procedure, rows };
+    })
+    .filter((procedure) => procedure.rows.length > 0);
+}
+
 function App() {
   const [selectedBuyer, setSelectedBuyer] = useState(BUYERS[0].label);
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
@@ -791,6 +807,7 @@ function App() {
   const [recentlyAddedProcedureId, setRecentlyAddedProcedureId] = useState("");
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
   const [filters, setFilters] = useState({});
+  const [contractSearch, setContractSearch] = useState("");
   const showBuyerColumn = selectedBuyer === "НГУ";
   const tableColumns = useMemo(
     () =>
@@ -806,9 +823,13 @@ function App() {
       ),
     [showBuyerColumn],
   );
-  const filteredResults = useMemo(
+  const filteredBySelects = useMemo(
     () => filterResults(results, filters),
     [results, filters],
+  );
+  const filteredResults = useMemo(
+    () => filterResultsByContractNumber(filteredBySelects, contractSearch),
+    [filteredBySelects, contractSearch],
   );
   const filterOptions = useMemo(
     () =>
@@ -836,6 +857,7 @@ function App() {
 
   function clearFilters() {
     setFilters({});
+    setContractSearch("");
   }
 
   function handleBuyerChange(value) {
@@ -859,6 +881,37 @@ function App() {
     setCheckedProcedures(procedures);
     setCheckedLots(lots);
     setStatus("Готово. Прогрес з файлу імпортовано.");
+  }
+
+  async function buildProcedureForItem(
+    item,
+    rowMatcher = () => true,
+    loadedDetails = null,
+  ) {
+    const details = loadedDetails || await fetchFullTenderDetails(item);
+    const lots = details.lots?.length ? details.lots : [null];
+    const lotRows = [];
+
+    for (const [lotIndex, lot] of lots.entries()) {
+      const award = findAwardForLot(details, lot);
+      const contract = findContractForLot(details, lot, award);
+      const contractDetails = await fetchContractDetails(contract?.id);
+      const rows = buildLotRow(
+        details,
+        lot,
+        lotIndex,
+        lots.length,
+        award,
+        contract,
+        contractDetails,
+      ).filter((row) => rowMatcher(row));
+
+      lotRows.push(...rows);
+    }
+
+    if (lotRows.length === 0) return null;
+
+    return buildProcedureResult(details, item, lotRows);
   }
 
   function toggleProcedureChecked(procedureId) {
@@ -973,28 +1026,11 @@ function App() {
                 continue;
               }
 
-              const lots = details.lots?.length ? details.lots : [null];
-              const lotRows = [];
-
-              for (const [lotIndex, lot] of lots.entries()) {
-                const award = findAwardForLot(details, lot);
-                const contract = findContractForLot(details, lot, award);
-                const contractDetails = await fetchContractDetails(contract?.id);
-
-                lotRows.push(
-                  ...buildLotRow(
-                    details,
-                    lot,
-                    lotIndex,
-                    lots.length,
-                    award,
-                    contract,
-                    contractDetails,
-                  ),
-                );
-              }
-
-              procedureResult = buildProcedureResult(details, item, lotRows);
+              procedureResult = await buildProcedureForItem(
+                item,
+                () => true,
+                details,
+              );
             } catch {
               const fallbackDetails = buildFallbackDetails(item);
               const fallbackRows = buildLotRow(
@@ -1046,6 +1082,102 @@ function App() {
       );
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
+      );
+    } catch (error) {
+      setStatus(`Помилка: ${error.message}`);
+      setSearchFinishedMessage("");
+    } finally {
+      setLoading(false);
+      setAddingProcedureTitle("");
+    }
+  }
+
+  async function handleContractRemoteSearch() {
+    const query = normalizeText(contractSearch);
+    const buyer = BUYERS.find((item) => item.label === selectedBuyer);
+
+    if (!query) {
+      setStatus("Введіть номер договору або його частину");
+      return;
+    }
+
+    if (!buyer?.edrpous?.length) {
+      setStatus("Для цього замовника ще не додано ЄДРПОУ");
+      setResults([]);
+      setSearchFinishedMessage("");
+      return;
+    }
+
+    setLoading(true);
+    setResults([]);
+    setFilters({});
+    setAddingProcedureTitle("");
+    setRecentlyAddedProcedureId("");
+    setSearchFinishedMessage("");
+
+    const found = [];
+    const foundTenderIds = new Set();
+
+    try {
+      for (const [edrpouIndex, edrpou] of buyer.edrpous.entries()) {
+        let page = 1;
+        let totalPages = 1;
+
+        while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
+          const json = await fetchTenderSearchPage({ edrpou, page });
+          const rows = json.data || [];
+          const edrpouTotal = json.total || rows.length;
+
+          totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
+          setStatus(
+            `Пошук договору "${contractSearch}". ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Сторінка ${page} з ${totalPages}. Знайдено: ${found.length}`,
+          );
+
+          for (const [itemIndex, item] of rows.entries()) {
+            if (foundTenderIds.has(item.tenderID)) {
+              continue;
+            }
+
+            setStatus(
+              `Пошук договору "${contractSearch}". Перевіряю процедуру ${itemIndex + 1} з ${rows.length}. Знайдено: ${found.length}`,
+            );
+
+            try {
+              const procedureResult = await buildProcedureForItem(item, (row) =>
+                normalizeText(row.contractNumber).includes(query),
+              );
+
+              if (!procedureResult) {
+                await wait(TENDER_REQUEST_DELAY_MS);
+                continue;
+              }
+
+              setAddingProcedureTitle(procedureResult.title);
+              await wait(ADD_ROW_ANIMATION_MS);
+
+              foundTenderIds.add(procedureResult.tenderID);
+              found.push(procedureResult);
+              setRecentlyAddedProcedureId(procedureResult.id);
+              setResults([...found]);
+              setAddingProcedureTitle("");
+            } catch {
+              setStatus(
+                `Пошук договору "${contractSearch}". Prozorro не відповів по ${item.tenderID || "процедурі"}. Продовжую.`,
+              );
+            }
+
+            await wait(TENDER_REQUEST_DELAY_MS);
+          }
+
+          page += 1;
+        }
+      }
+
+      setStatus(
+        `Готово. За номером договору "${contractSearch}" знайдено: ${found.length} процедур.`,
+      );
+      setSearchFinishedMessage(
+        `Пошук договору завершено. Знайдено: ${found.length} процедур.`,
       );
     } catch (error) {
       setStatus(`Помилка: ${error.message}`);
@@ -1112,6 +1244,33 @@ function App() {
             onImport={handleStorageImport}
             storageKeys={STORAGE_KEYS}
           />
+
+          <label className="contract-search">
+            Пошук по номеру договору
+            <span className="contract-search-control">
+              <input
+                disabled={loading}
+                onChange={(event) => setContractSearch(event.target.value)}
+                placeholder="Наприклад: 529 або ПС/УТЗ"
+                type="search"
+                value={contractSearch}
+              />
+              <button
+                disabled={loading || !contractSearch.trim()}
+                onClick={handleContractRemoteSearch}
+                type="button"
+              >
+                Знайти договір
+              </button>
+              <button
+                disabled={loading || !contractSearch}
+                onClick={() => setContractSearch("")}
+                type="button"
+              >
+                Очистити
+              </button>
+            </span>
+          </label>
         </form>
 
         <p className="status">{status}</p>

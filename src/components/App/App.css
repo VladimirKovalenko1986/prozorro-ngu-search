@@ -47,6 +47,28 @@ h1 {
   flex-wrap: wrap;
 }
 
+.contract-search {
+  width: min(980px, 100%);
+  margin-top: 8px;
+}
+
+.contract-search-control {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.contract-search input {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.contract-search button {
+  flex: 0 0 auto;
+  padding: 0 20px;
+  font-size: 18px;
+}
+
 label {
   display: grid;
   gap: 8px;
