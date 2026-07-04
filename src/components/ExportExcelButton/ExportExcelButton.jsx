@@ -1,6 +1,4 @@
 import { formatDate } from "../../utils/formatDate.js";
-import { formatMoney } from "../../utils/formatMoney.js";
-import { formatQuantity } from "../../utils/formatQuantity.js";
 import css from "./ExportExcelButton.module.css";
 
 function getColumns(showBuyerColumn) {
@@ -33,6 +31,25 @@ function escapeCell(value) {
     .replaceAll('"', "&quot;");
 }
 
+function textCell(value) {
+  return {
+    type: "text",
+    value: value ?? "",
+  };
+}
+
+function numberCell(value, format = "#,##0.00") {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) return textCell("");
+
+  return {
+    format,
+    type: "number",
+    value: number,
+  };
+}
+
 function getLotAndSpecificationLabel(row) {
   const parts = [];
 
@@ -56,82 +73,67 @@ function getCalculatedContractTotal(rows) {
   return total || null;
 }
 
-function getQuantityCell(row) {
-  const total = formatQuantity(row.quantity);
-  const details = row.specificationQuantities?.length
-    ? `Специфікація: ${row.specificationQuantities.join("; ")}`
-    : "";
-
-  return [total, details].filter(Boolean).join("\n");
-}
-
 function buildExcelRows(results, showBuyerColumn) {
   return results.flatMap((procedure) =>
     [
       ...procedure.rows.map((row) => [
-        procedure.title,
-        procedure.procedureType,
-        ...(showBuyerColumn ? [procedure.buyerUnit] : []),
-        procedure.tenderID,
-        formatDate(procedure.procedureDate),
-        getLotAndSpecificationLabel(row),
-        formatMoney(row.expectedAmount, row.expectedCurrency),
-        row.supplierName,
-        getQuantityCell(row),
-        row.unitName,
-        formatMoney(row.unitPrice, row.contractCurrency),
-        formatMoney(row.contractAmount, row.contractCurrency),
-        formatDate(row.dateSigned),
-        row.contractNumber,
-        procedure.tenderStatus,
-        row.contractStatus,
-        row.awardStatus,
+        textCell(procedure.title),
+        textCell(procedure.procedureType),
+        ...(showBuyerColumn ? [textCell(procedure.buyerUnit)] : []),
+        textCell(procedure.tenderID),
+        textCell(formatDate(procedure.procedureDate)),
+        textCell(getLotAndSpecificationLabel(row)),
+        numberCell(row.expectedAmount),
+        textCell(row.supplierName),
+        numberCell(row.quantity, "#,##0.###"),
+        textCell(row.unitName),
+        numberCell(row.unitPrice),
+        numberCell(row.contractAmount),
+        textCell(formatDate(row.dateSigned)),
+        textCell(row.contractNumber),
+        textCell(procedure.tenderStatus),
+        textCell(row.contractStatus),
+        textCell(row.awardStatus),
       ]),
       ...(procedure.rows.some((row) => row.specificationTitle)
         ? [
             [
-              "Сума договору за API",
-              "",
-              ...(showBuyerColumn ? [""] : []),
-              "",
-              "",
-              "",
-              "",
-              "",
-              "",
-              "",
-              "",
-              formatMoney(
-                procedure.rows[0]?.contractTotalAmount,
-                procedure.rows[0]?.contractCurrency,
-              ),
-              "",
-              "",
-              "",
-              "",
-              "",
+              textCell("Сума договору за API"),
+              textCell(""),
+              ...(showBuyerColumn ? [textCell("")] : []),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              numberCell(procedure.rows[0]?.contractTotalAmount),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
             ],
             [
-              "Сума по факту",
-              "",
-              ...(showBuyerColumn ? [""] : []),
-              "",
-              "",
-              "",
-              "",
-              "",
-              "",
-              "",
-              "",
-              formatMoney(
-                getCalculatedContractTotal(procedure.rows),
-                procedure.rows[0]?.contractCurrency,
-              ),
-              "",
-              "",
-              "",
-              "",
-              "",
+              textCell("Сума по факту"),
+              textCell(""),
+              ...(showBuyerColumn ? [textCell("")] : []),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              numberCell(getCalculatedContractTotal(procedure.rows)),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
+              textCell(""),
             ],
           ]
         : []),
@@ -147,7 +149,13 @@ function buildExcelHtml(results, showBuyerColumn) {
     .map(
       (row) =>
         `<tr>${row
-          .map((cell) => `<td>${escapeCell(cell)}</td>`)
+          .map((cell) => {
+            if (cell.type === "number") {
+              return `<td style="mso-number-format:'${cell.format}';">${cell.value}</td>`;
+            }
+
+            return `<td>${escapeCell(cell.value)}</td>`;
+          })
           .join("")}</tr>`,
     )
     .join("");
