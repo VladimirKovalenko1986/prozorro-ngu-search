@@ -154,6 +154,7 @@ const TABLE_COLUMNS = [
 ];
 
 const FILTER_COLUMNS = [
+  { key: "buyerUnit", label: "Замовник" },
   { key: "supplier", label: "Контрагент" },
   { key: "dateSigned", label: "Дата підписання" },
   { key: "contractNumber", label: "Номер договору" },
@@ -688,6 +689,7 @@ function buildProcedureResult(details, item, lotRows) {
 function getFilterValue(procedure, row, key) {
   const values = {
     title: procedure.title,
+    buyerUnit: procedure.buyerUnit,
     lot: getLotAndSpecificationLabel(row),
     expectedAmount: formatMoney(row.expectedAmount, row.expectedCurrency),
     contractAmount: formatMoney(row.contractAmount, row.contractCurrency),
@@ -780,20 +782,27 @@ function App() {
       ),
     [showBuyerColumn],
   );
+  const filterColumns = useMemo(
+    () =>
+      FILTER_COLUMNS.filter(
+        (column) => column.key !== "buyerUnit" || showBuyerColumn,
+      ),
+    [showBuyerColumn],
+  );
   const filteredResults = useMemo(
     () => filterResults(results, filters),
     [results, filters],
   );
   const filterOptions = useMemo(
     () =>
-      FILTER_COLUMNS.reduce(
+      filterColumns.reduce(
         (options, column) => ({
           ...options,
           [column.key]: buildFilterOptions(results, column.key),
         }),
         {},
       ),
-    [results],
+    [results, filterColumns],
   );
   const hasActiveFilters = Object.values(filters).some(
     (values) => values.length > 0,
@@ -810,6 +819,21 @@ function App() {
 
   function clearFilters() {
     setFilters({});
+  }
+
+  function handleBuyerChange(value) {
+    setSelectedBuyer(value);
+
+    if (value !== "НГУ") {
+      setFilters((current) => {
+        if (!current.buyerUnit?.length) return current;
+
+        const next = { ...current };
+        delete next.buyerUnit;
+
+        return next;
+      });
+    }
   }
 
   function toggleProcedureChecked(procedureId) {
@@ -1017,7 +1041,7 @@ function App() {
             Замовник
             <select
               value={selectedBuyer}
-              onChange={(event) => setSelectedBuyer(event.target.value)}
+              onChange={(event) => handleBuyerChange(event.target.value)}
             >
               {BUYERS.map((buyer) => (
                 <option key={buyer.label} value={buyer.label}>
@@ -1124,10 +1148,12 @@ function App() {
                       ) : (
                         <details className="filter-menu">
                           <summary>
-                            Фільтр
-                            {filters[column.key]?.length
-                              ? ` (${filters[column.key].length})`
-                              : ""}
+                            <span>Фільтр</span>
+                            {filters[column.key]?.length ? (
+                              <span className="filter-count">
+                                {filters[column.key].length}
+                              </span>
+                            ) : null}
                           </summary>
 
                           <div className="filter-options">

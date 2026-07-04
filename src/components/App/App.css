@@ -188,7 +188,8 @@ th {
 .filter-trigger {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   height: 38px;
   width: fit-content;
   min-width: 96px;
@@ -201,6 +202,21 @@ th {
   font-size: 14px;
   font-weight: 700;
   list-style: none;
+  white-space: nowrap;
+}
+
+.filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: #e8edf2;
+  color: #53616f;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .filter-trigger:disabled {
@@ -314,8 +330,14 @@ td span {
 
 .buyer-column,
 .buyer-cell {
-  width: 90px;
-  max-width: 90px;
+  width: 120px;
+  max-width: 120px;
+}
+
+.buyer-column .filter-menu summary,
+.buyer-column .filter-trigger {
+  min-width: 0;
+  width: 100%;
 }
 
 .buyer-cell {
