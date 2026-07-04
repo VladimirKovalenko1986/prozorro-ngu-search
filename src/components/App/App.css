@@ -150,7 +150,8 @@ button:disabled {
 table {
   width: 100%;
   min-width: 1420px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 th,
@@ -162,10 +163,14 @@ td {
 }
 
 th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   background: #f8fafc;
   font-size: 13px;
   color: #53616f;
   height: 120px;
+  box-shadow: 0 2px 0 #dce3ea;
 }
 
 .column-title {
@@ -448,7 +453,7 @@ td span {
   background: white;
   border: 1px solid #dce3ea;
   border-radius: 8px;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .empty-panel {
