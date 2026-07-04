@@ -85,7 +85,7 @@ function buildExcelRows(results, showBuyerColumn) {
         textCell(getLotAndSpecificationLabel(row)),
         numberCell(row.expectedAmount),
         textCell(row.supplierName),
-        numberCell(row.quantity, "#,##0.###"),
+        numberCell(row.quantity, "#,##0"),
         textCell(row.unitName),
         numberCell(row.unitPrice),
         numberCell(row.contractAmount),
