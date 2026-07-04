@@ -1,0 +1,61 @@
+.group {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  border-radius: 6px;
+  color: white;
+  padding: 0 18px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.exportButton {
+  background: #6d5dfc;
+}
+
+.exportButton:hover:not(:disabled) {
+  background: #5548d9;
+}
+
+.importButton {
+  background: #8b5cf6;
+}
+
+.importButton:hover {
+  background: #7245d8;
+}
+
+.button:has(input:disabled) {
+  background: #8da9c4;
+  cursor: not-allowed;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: white;
+  color: #6d5dfc;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

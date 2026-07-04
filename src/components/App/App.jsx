@@ -10,6 +10,7 @@ import { formatMoney } from "../../utils/formatMoney.js";
 import { formatQuantity } from "../../utils/formatQuantity.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
+import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
 import "./App.css";
 
 const NGU_EDRPOUS = [
@@ -836,6 +837,14 @@ function App() {
     }
   }
 
+  function handleStorageImport({ procedures, lots }) {
+    writeStoredChecks(STORAGE_KEYS.procedures, procedures);
+    writeStoredChecks(STORAGE_KEYS.lots, lots);
+    setCheckedProcedures(procedures);
+    setCheckedLots(lots);
+    setStatus("Готово. Прогрес з файлу імпортовано.");
+  }
+
   function toggleProcedureChecked(procedureId) {
     setCheckedProcedures((current) => {
       const next = { ...current };
@@ -1080,6 +1089,12 @@ function App() {
             disabled={loading}
             results={filteredResults}
             showBuyerColumn={showBuyerColumn}
+          />
+
+          <StorageTransferButtons
+            disabled={loading}
+            onImport={handleStorageImport}
+            storageKeys={STORAGE_KEYS}
           />
         </form>
 
