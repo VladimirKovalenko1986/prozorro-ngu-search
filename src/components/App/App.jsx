@@ -808,6 +808,7 @@ function App() {
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
   const [filters, setFilters] = useState({});
   const [contractSearch, setContractSearch] = useState("");
+  const [subjectSearch, setSubjectSearch] = useState("");
   const showBuyerColumn = selectedBuyer === "НГУ";
   const tableColumns = useMemo(
     () =>
@@ -858,6 +859,7 @@ function App() {
   function clearFilters() {
     setFilters({});
     setContractSearch("");
+    setSubjectSearch("");
   }
 
   function handleBuyerChange(value) {
@@ -1188,6 +1190,120 @@ function App() {
     }
   }
 
+  async function handleSubjectRemoteSearch() {
+    const query = subjectSearch.trim();
+    const buyer = BUYERS.find((item) => item.label === selectedBuyer);
+
+    if (!query) {
+      setStatus("Введіть предмет закупівлі або його частину");
+      return;
+    }
+
+    if (!buyer?.edrpous?.length) {
+      setStatus("Для цього замовника ще не додано ЄДРПОУ");
+      setResults([]);
+      setSearchFinishedMessage("");
+      return;
+    }
+
+    setLoading(true);
+    setResults([]);
+    setFilters({});
+    setContractSearch("");
+    setAddingProcedureTitle("");
+    setRecentlyAddedProcedureId("");
+    setSearchFinishedMessage("");
+
+    const found = [];
+    const foundTenderIds = new Set();
+
+    try {
+      for (const [edrpouIndex, edrpou] of buyer.edrpous.entries()) {
+        let page = 1;
+        let totalPages = 1;
+
+        while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
+          const json = await fetchTenderSearchPage({
+            edrpou,
+            page,
+            searchText: query,
+          });
+          const rows = json.data || [];
+          const edrpouTotal = json.total || rows.length;
+
+          totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
+          setStatus(
+            `Пошук предмета "${query}". ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Сторінка ${page} з ${totalPages}. Знайдено: ${found.length}`,
+          );
+
+          for (const [itemIndex, item] of rows.entries()) {
+            if (foundTenderIds.has(item.tenderID)) {
+              continue;
+            }
+
+            setStatus(
+              `Пошук предмета "${query}". Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Знайдено: ${found.length}`,
+            );
+
+            let procedureResult;
+
+            try {
+              procedureResult = await buildProcedureForItem(item);
+            } catch {
+              const fallbackDetails = buildFallbackDetails(item);
+              const fallbackRows = buildLotRow(
+                fallbackDetails,
+                null,
+                0,
+                1,
+                null,
+                null,
+                null,
+              );
+
+              procedureResult = buildProcedureResult(
+                fallbackDetails,
+                item,
+                fallbackRows,
+              );
+            }
+
+            if (!procedureResult) {
+              await wait(TENDER_REQUEST_DELAY_MS);
+              continue;
+            }
+
+            setAddingProcedureTitle(procedureResult.title);
+            await wait(ADD_ROW_ANIMATION_MS);
+
+            foundTenderIds.add(procedureResult.tenderID);
+            found.push(procedureResult);
+            setRecentlyAddedProcedureId(procedureResult.id);
+            setResults([...found]);
+            setAddingProcedureTitle("");
+
+            await wait(TENDER_REQUEST_DELAY_MS);
+          }
+
+          page += 1;
+        }
+      }
+
+      setStatus(
+        `Готово. За предметом "${query}" знайдено: ${found.length} процедур.`,
+      );
+      setSearchFinishedMessage(
+        `Пошук предмета завершено. Знайдено: ${found.length} процедур.`,
+      );
+    } catch (error) {
+      setStatus(`Помилка: ${error.message}`);
+      setSearchFinishedMessage("");
+    } finally {
+      setLoading(false);
+      setAddingProcedureTitle("");
+    }
+  }
+
   return (
     <main className="page">
       <section className="panel" id="search-panel">
@@ -1265,6 +1381,33 @@ function App() {
               <button
                 disabled={loading || !contractSearch}
                 onClick={() => setContractSearch("")}
+                type="button"
+              >
+                Очистити
+              </button>
+            </span>
+          </label>
+
+          <label className="contract-search">
+            Пошук по предмету закупівлі
+            <span className="contract-search-control">
+              <input
+                disabled={loading}
+                onChange={(event) => setSubjectSearch(event.target.value)}
+                placeholder="Наприклад: картопля або телефон"
+                type="search"
+                value={subjectSearch}
+              />
+              <button
+                disabled={loading || !subjectSearch.trim()}
+                onClick={handleSubjectRemoteSearch}
+                type="button"
+              >
+                Знайти предмет
+              </button>
+              <button
+                disabled={loading || !subjectSearch}
+                onClick={() => setSubjectSearch("")}
                 type="button"
               >
                 Очистити
