@@ -317,6 +317,22 @@ function addVat(amount) {
   return number ? number * 1.2 : null;
 }
 
+function isFopSupplier(name) {
+  const normalized = normalizeText(name);
+
+  return (
+    /\bфоп\b/.test(normalized) ||
+    normalized.includes("фізична особа підприємець") ||
+    normalized.includes("фiзична особа підприємець")
+  );
+}
+
+function getUnitPriceWithTaxRule(item, supplierName) {
+  const unitPrice = getItemUnitPrice(item);
+
+  return isFopSupplier(supplierName) ? unitPrice : addVat(unitPrice);
+}
+
 function getItemDescription(item) {
   return item?.description || item?.title || "";
 }
@@ -523,7 +539,7 @@ function buildLotRow(
 
   if (visibleSpecificationItems.length > 0) {
     const itemUnitPrices = visibleSpecificationItems.map((item) =>
-      addVat(getItemUnitPrice(item)),
+      getUnitPriceWithTaxRule(item, baseRow.supplierName),
     );
     const hasAllUnitPrices = itemUnitPrices.every(Boolean);
 
