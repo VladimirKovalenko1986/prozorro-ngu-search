@@ -1,12 +1,27 @@
 .button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  background: #188038;
+  height: 56px;
+  border: 0;
+  border-radius: 6px;
+  background: #0b6bcb;
+  color: white;
+  padding: 0 28px;
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .button:hover:not(:disabled) {
-  background: #0f6b2b;
+  background: #095aab;
+}
+
+.button:disabled {
+  background: #8da9c4;
+  cursor: not-allowed;
 }
 
 .icon {

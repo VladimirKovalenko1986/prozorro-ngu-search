@@ -1,0 +1,320 @@
+.tablePanel {
+  background: white;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  overflow: visible;
+}
+
+.emptyPanel {
+  padding: 24px;
+  color: #53616f;
+}
+
+.table {
+  width: 100%;
+  min-width: 1420px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e8edf2;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 120px;
+  background: #f8fafc;
+  box-shadow: 0 2px 0 #dce3ea;
+  color: #53616f;
+  font-size: 13px;
+}
+
+.table td span {
+  display: block;
+  margin-top: 6px;
+  color: #667788;
+}
+
+.columnTitle {
+  display: flex;
+  align-items: flex-start;
+  min-height: 50px;
+}
+
+.filterMenu {
+  position: relative;
+  margin-top: 10px;
+}
+
+.filterMenu summary,
+.filterTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 96px;
+  width: fit-content;
+  height: 38px;
+  border: 1px solid #b8c4cf;
+  border-radius: 5px;
+  background: white;
+  color: #17202a;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.filterMenu summary::-webkit-details-marker {
+  display: none;
+}
+
+.filterCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: #e8edf2;
+  color: #53616f;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.filterTrigger:disabled {
+  background: #eef2f6;
+  color: #8b98a5;
+  cursor: not-allowed;
+}
+
+.filterOptions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 260px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  background: white;
+  padding: 8px;
+  box-shadow: 0 14px 28px rgba(23, 32, 42, 0.14);
+}
+
+.filterOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filterOption:hover {
+  background: #f4f6f8;
+}
+
+.filterOption input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.filterOption span {
+  display: block;
+  margin: 0;
+  color: #17202a;
+}
+
+.procedureCell {
+  width: 320px;
+  background: #fbfcfd;
+}
+
+.procedureTypeColumn,
+.procedureTypeCell {
+  width: 150px;
+  max-width: 150px;
+}
+
+.procedureTypeCell {
+  color: #53616f;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.supplierColumn,
+.supplierCell {
+  width: 190px;
+  max-width: 190px;
+}
+
+.buyerColumn,
+.buyerCell {
+  width: 120px;
+  max-width: 120px;
+}
+
+.buyerColumn .filterMenu summary,
+.buyerColumn .filterTrigger {
+  min-width: 0;
+  width: 100%;
+}
+
+.buyerCell {
+  font-weight: 700;
+}
+
+.supplierCell {
+  overflow-wrap: anywhere;
+}
+
+.processedRow td,
+.processedRow .procedureCell {
+  background: #fff3b0;
+}
+
+.processedRow td:first-child,
+.processedRow .procedureCell {
+  box-shadow: inset 4px 0 #d69e00;
+}
+
+.rowAdded td,
+.rowAdded .procedureCell {
+  animation: row-add 900ms ease-out;
+}
+
+.contractTotalRow td {
+  background: #f8fafc;
+  border-bottom: 1px solid #dce3ea;
+  color: #17202a;
+  font-weight: 800;
+}
+
+.contractTotalRowFact td {
+  background: #eef8f1;
+  border-bottom: 2px solid #bde7c9;
+}
+
+.contractTotalRow td:first-child {
+  text-align: right;
+}
+
+.processedCheck,
+.lotCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.processedCheck input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.lotCheck input {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.lotCheck input:disabled {
+  opacity: 0.5;
+}
+
+.specificationTitle {
+  margin-top: 10px;
+  white-space: pre-line;
+}
+
+.specificationTitle strong {
+  display: block;
+  color: #17202a;
+}
+
+.specificationQuantities {
+  display: block;
+  margin-top: 46px;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.specificationQuantities span {
+  display: block;
+}
+
+.procedureCell a {
+  display: block;
+  margin-top: 10px;
+  color: #0b6bcb;
+}
+
+.statusCell {
+  min-width: 150px;
+}
+
+.statusBadge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 6px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.statusBadgeProgress {
+  background: #ffe58a;
+  color: #7a5200;
+}
+
+.statusBadgeNegative {
+  background: #ffb8b8;
+  color: #8f1d1d;
+}
+
+.statusBadgeSuccess {
+  background: #bff0cf;
+  color: #17633a;
+}
+
+.statusBadgeNeutral {
+  background: #e8edf2;
+  color: #53616f;
+}
+
+@keyframes row-add {
+  0% {
+    background: #e7f2ff;
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  45% {
+    background: #fff0a6;
+    opacity: 1;
+  }
+
+  100% {
+    background: inherit;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

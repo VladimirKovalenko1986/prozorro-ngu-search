@@ -1,0 +1,148 @@
+.panel {
+  background: white;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0 0 20px;
+  font-size: 28px;
+}
+
+.controls {
+  display: flex;
+  gap: 24px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.controlLabel {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.control,
+.remoteSearchInput {
+  width: 260px;
+  height: 56px;
+  border: 1px solid #b8c4cf;
+  border-radius: 6px;
+  padding: 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+  background-color: white;
+  color: #17202a;
+}
+
+select.control {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #17202a 50%),
+    linear-gradient(135deg, #17202a 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) 24px,
+    calc(100% - 14px) 24px;
+  background-size:
+    8px 8px,
+    8px 8px;
+  background-repeat: no-repeat;
+  padding-right: 44px;
+}
+
+.primaryButton,
+.secondaryButton {
+  height: 56px;
+  border: 0;
+  border-radius: 6px;
+  background: #0b6bcb;
+  color: white;
+  padding: 0 28px;
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  background: #8da9c4;
+  cursor: not-allowed;
+}
+
+.remoteSearch {
+  width: min(980px, 100%);
+  margin-top: 8px;
+}
+
+.remoteSearchControl {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.remoteSearchInput {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.secondaryButton {
+  flex: 0 0 auto;
+  padding: 0 20px;
+  font-size: 18px;
+}
+
+.status {
+  margin: 18px 0 0;
+  color: #53616f;
+}
+
+.searchActivity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  color: #0b6bcb;
+  font-weight: 700;
+}
+
+.searchSpinner {
+  width: 24px;
+  height: 24px;
+  border: 4px solid #cfe3ff;
+  border-top-color: #0b6bcb;
+  border-radius: 50%;
+  animation: search-spin 700ms linear infinite;
+}
+
+.searchFinished {
+  width: fit-content;
+  margin-top: 14px;
+  border: 1px solid #bde7c9;
+  border-radius: 6px;
+  background: #ecfdf3;
+  color: #17633a;
+  padding: 10px 14px;
+  font-weight: 700;
+  animation: finished-pop 260ms ease-out;
+}
+
+@keyframes search-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes finished-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

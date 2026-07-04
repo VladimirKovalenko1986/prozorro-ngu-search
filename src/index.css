@@ -1,6 +1,26 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
+  background: #f4f6f8;
+  color: #17202a;
   font-family: sans-serif;
   line-height: 1.5;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  accent-color: #0b6bcb;
 }
 
 h1,
@@ -25,8 +45,8 @@ img {
 }
 
 a {
+  color: #0b6bcb;
   text-decoration: none;
-  /* color: black; */
 }
 
 ul {

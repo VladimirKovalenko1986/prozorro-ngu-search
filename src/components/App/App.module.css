@@ -1,0 +1,12 @@
+.page {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.emptyPanel {
+  background: white;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  padding: 24px;
+  color: #53616f;
+}
