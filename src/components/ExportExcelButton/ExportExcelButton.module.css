@@ -6,7 +6,7 @@
   height: 56px;
   border: 0;
   border-radius: 6px;
-  background: #0b6bcb;
+  background: #188038;
   color: white;
   padding: 0 28px;
   cursor: pointer;
@@ -16,7 +16,7 @@
 }
 
 .button:hover:not(:disabled) {
-  background: #095aab;
+  background: #0f6b2b;
 }
 
 .button:disabled {
