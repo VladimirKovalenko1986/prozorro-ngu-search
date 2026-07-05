@@ -84,7 +84,7 @@ export default function StorageTransferButtons({
       </button>
 
       <label className={`${css.button} ${css.importButton}`}>
-        <span className={css.icon}>⇩</span>
+        <span className={`${css.icon} ${css.importIcon}`}>⇧</span>
         Надати
         <input
           accept="application/json,.json"

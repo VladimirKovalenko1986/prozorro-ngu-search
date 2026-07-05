@@ -8,6 +8,7 @@
   align-items: center;
   gap: 10px;
   height: 56px;
+  border: 1px solid transparent;
   border-radius: 6px;
   color: white;
   padding: 0 18px;
@@ -19,22 +20,27 @@
 
 .exportButton {
   background: #6d5dfc;
+  border-color: #6d5dfc;
 }
 
 .exportButton:hover:not(:disabled) {
   background: #5548d9;
+  border-color: #5548d9;
 }
 
 .importButton {
   background: #8b5cf6;
+  border-color: #8b5cf6;
 }
 
 .importButton:hover {
   background: #7245d8;
+  border-color: #7245d8;
 }
 
 .button:has(input:disabled) {
   background: #8da9c4;
+  border-color: #8da9c4;
   cursor: not-allowed;
 }
 
@@ -50,6 +56,10 @@
   font-size: 16px;
   font-weight: 900;
   line-height: 1;
+}
+
+.importIcon {
+  transform: rotate(180deg);
 }
 
 .button input {
