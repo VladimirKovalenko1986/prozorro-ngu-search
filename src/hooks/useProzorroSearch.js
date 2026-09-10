@@ -77,9 +77,22 @@ export function useProzorroSearch() {
     () => filterResults(results, filters),
     [results, filters],
   );
+  const activeContractSearches = useMemo(() => {
+    const selectedValues = selectedContractNumbers.map((item) => item.value);
+    const normalizedDraft = normalizeText(contractSearch);
+
+    if (
+      !normalizedDraft ||
+      selectedContractNumbers.some((item) => item.normalized === normalizedDraft)
+    ) {
+      return selectedValues;
+    }
+
+    return [...selectedValues, contractSearch];
+  }, [contractSearch, selectedContractNumbers]);
   const filteredResults = useMemo(
-    () => filterResultsByContractNumber(filteredBySelects, contractSearch),
-    [filteredBySelects, contractSearch],
+    () => filterResultsByContractNumber(filteredBySelects, activeContractSearches),
+    [activeContractSearches, filteredBySelects],
   );
   const filterOptions = useMemo(
     () =>

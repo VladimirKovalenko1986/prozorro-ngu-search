@@ -557,14 +557,18 @@ export function filterResults(results, filters) {
 }
 
 export function filterResultsByContractNumber(results, contractSearch) {
-  const query = normalizeText(contractSearch);
+  const queries = (Array.isArray(contractSearch) ? contractSearch : [contractSearch])
+    .map((value) => normalizeText(value))
+    .filter(Boolean);
 
-  if (!query) return results;
+  if (queries.length === 0) return results;
 
   return results
     .map((procedure) => {
       const rows = procedure.rows.filter((row) =>
-        normalizeText(row.contractNumber).includes(query),
+        queries.some((query) =>
+          normalizeText(row.contractNumber).includes(query),
+        ),
       );
 
       return { ...procedure, rows };
