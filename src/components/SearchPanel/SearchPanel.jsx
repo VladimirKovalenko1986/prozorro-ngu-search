@@ -35,99 +35,132 @@ export default function SearchPanel({
   return (
     <section className={css.panel} id="search-panel">
       <div className={css.header}>
-        <h1 className={css.title}>Пошук договорів Prozorro</h1>
+        <div className={css.brand}>
+          <span className={css.brandMark} aria-hidden="true">P</span>
+          <div>
+            <span className={css.eyebrow}>Prozorro · договори</span>
+            <h1 className={css.title}>Пошук закупівель</h1>
+          </div>
+        </div>
         <ThemeToggle onToggle={onThemeToggle} theme={theme} />
       </div>
 
       <form className={css.controls} onSubmit={onSearch}>
-        <label className={css.controlLabel}>
-          Замовник
-          <select
-            className={css.control}
-            value={buyer}
-            onChange={(event) => onBuyerChange(event.target.value)}
-          >
-            {BUYERS.map((item) => (
-              <option key={item.label} value={item.label}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <section className={`${css.searchCard} ${css.mainSearchCard}`}>
+          <div className={css.sectionHeading}>
+            <span className={css.sectionNumber}>01</span>
+            <div>
+              <h2>Основний пошук</h2>
+              <p>Замовник, період і код закупівлі</p>
+            </div>
+          </div>
 
-        <label className={css.controlLabel}>
-          З дати
-          <input
-            className={css.control}
-            type="date"
-            value={dateFrom}
-            onChange={(event) => onDateFromChange(event.target.value)}
-          />
-        </label>
+          <div className={css.primaryControls}>
+            <label className={css.controlLabel}>
+              Замовник
+              <select
+                className={css.control}
+                value={buyer}
+                onChange={(event) => onBuyerChange(event.target.value)}
+              >
+                {BUYERS.map((item) => (
+                  <option key={item.label} value={item.label}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label className={css.controlLabel}>
-          По дату
-          <input
-            className={css.control}
-            type="date"
-            value={dateTo}
-            onChange={(event) => onDateToChange(event.target.value)}
-          />
-        </label>
+            <label className={css.controlLabel}>
+              З дати
+              <input
+                className={css.control}
+                type="date"
+                value={dateFrom}
+                onChange={(event) => onDateFromChange(event.target.value)}
+              />
+            </label>
 
-        <button className={css.primaryButton} type="submit" disabled={disabled}>
-          {disabled ? "Шукаю..." : "Шукати"}
-        </button>
+            <label className={css.controlLabel}>
+              По дату
+              <input
+                className={css.control}
+                type="date"
+                value={dateTo}
+                onChange={(event) => onDateToChange(event.target.value)}
+              />
+            </label>
 
-        <ExportExcelButton
-          buyer={buyer}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          disabled={disabled}
-          results={tableResults}
-          showBuyerColumn={showBuyerColumn}
-        />
+            <button className={css.primaryButton} type="submit" disabled={disabled}>
+              <span>{disabled ? "Шукаю..." : "Шукати"}</span>
+              <span aria-hidden="true" className={css.buttonArrow}>→</span>
+            </button>
+          </div>
 
-        <StorageTransferButtons
-          disabled={disabled}
-          onImport={onStorageImport}
-          storageKeys={storageKeys}
-        />
+          <label className={`${css.controlLabel} ${css.dkSearch}`}>
+            Пошук по ДК
+            <input
+              className={css.control}
+              disabled={disabled}
+              list="dk-021-options"
+              onChange={(event) => onDkCodeChange(event.target.value)}
+              placeholder="Введіть 3–4 цифри або частину назви"
+              type="search"
+              value={dkCode}
+            />
+            <datalist id="dk-021-options">
+              {dkSuggestions.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </datalist>
+          </label>
 
-        <label className={`${css.controlLabel} ${css.dkSearch}`}>
-          Пошук по ДК
-          <input
-            className={css.control}
+          <div className={css.utilityRow}>
+            <ExportExcelButton
+              buyer={buyer}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              disabled={disabled}
+              results={tableResults}
+              showBuyerColumn={showBuyerColumn}
+            />
+
+            <StorageTransferButtons
+              disabled={disabled}
+              onImport={onStorageImport}
+              storageKeys={storageKeys}
+            />
+          </div>
+        </section>
+
+        <section className={`${css.searchCard} ${css.contractSearchCard}`}>
+          <div className={css.sectionHeading}>
+            <span className={css.sectionNumber}>02</span>
+            <div>
+              <h2>Точний пошук</h2>
+              <p>Знайдіть конкретний договір за номером</p>
+            </div>
+          </div>
+
+          <SearchBox
             disabled={disabled}
-            list="dk-021-options"
-            onChange={(event) => onDkCodeChange(event.target.value)}
-            placeholder="Введіть 3–4 цифри або частину назви"
-            type="search"
-            value={dkCode}
+            label="Номер договору"
+            onClear={() => onContractSearchChange("")}
+            onSearch={onContractSearch}
+            onValueChange={onContractSearchChange}
+            placeholder="Наприклад: 529 або ПС/УТЗ"
+            searchButtonLabel="Знайти договір"
+            value={contractSearch}
           />
-          <datalist id="dk-021-options">
-            {dkSuggestions.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.label}
-              </option>
-            ))}
-          </datalist>
-        </label>
-
-        <SearchBox
-          disabled={disabled}
-          label="Пошук по номеру договору"
-          onClear={() => onContractSearchChange("")}
-          onSearch={onContractSearch}
-          onValueChange={onContractSearchChange}
-          placeholder="Наприклад: 529 або ПС/УТЗ"
-          searchButtonLabel="Знайти договір"
-          value={contractSearch}
-        />
-
+        </section>
       </form>
 
-      <p className={css.status}>{status}</p>
+      <p className={css.status}>
+        <span className={css.statusDot} aria-hidden="true" />
+        {status}
+      </p>
 
       {disabled ? (
         <div className={css.searchActivity} aria-live="polite">

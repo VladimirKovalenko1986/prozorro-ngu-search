@@ -5,23 +5,31 @@
   gap: 10px;
   height: 56px;
   border: 0;
-  border-radius: 6px;
-  background: #188038;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #188a46, #087a50);
+  box-shadow: 0 9px 20px rgba(18, 128, 66, 0.2);
   color: white;
   padding: 0 28px;
   cursor: pointer;
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
 }
 
 .button:hover:not(:disabled) {
-  background: #0f6b2b;
+  box-shadow: 0 13px 26px rgba(18, 128, 66, 0.3);
+  filter: saturate(1.12);
+  transform: translateY(-2px);
 }
 
 .button:disabled {
   background: #8da9c4;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .icon {
@@ -36,4 +44,8 @@
   font-size: 16px;
   font-weight: 800;
   line-height: 1;
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
 }

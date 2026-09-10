@@ -6,6 +6,8 @@
   color-scheme: light;
   --page-background: #f4f6f8;
   --panel-background: #ffffff;
+  --card-background: rgba(255, 255, 255, 0.76);
+  --input-background: rgba(255, 255, 255, 0.92);
   --soft-background: #f8fafc;
   --hover-background: #eef3f8;
   --disabled-background: #e8eef4;
@@ -15,9 +17,18 @@
   --disabled-text: #8b98a5;
   --border-color: #dce3ea;
   --control-border: #b8c4cf;
+  --input-hover-border: #7fa7cf;
   --table-border: #e8edf2;
   --accent-color: #0b6bcb;
   --accent-soft: #cfe3ff;
+  --accent-border: #acd1f7;
+  --focus-ring: rgba(11, 107, 203, 0.15);
+  --placeholder-text: #7b8794;
+  --disabled-button: #9cb0c4;
+  --panel-glow: rgba(67, 139, 255, 0.13);
+  --panel-shadow: 0 24px 70px rgba(47, 64, 82, 0.1);
+  --card-shadow: 0 8px 24px rgba(47, 64, 82, 0.06);
+  --card-shadow-hover: 0 14px 34px rgba(47, 64, 82, 0.11);
   --menu-shadow: rgba(23, 32, 42, 0.14);
   --procedure-background: #fbfcfd;
   --processed-background: #fff3b0;
@@ -33,6 +44,8 @@
   color-scheme: dark;
   --page-background: #0e151d;
   --panel-background: #17212b;
+  --card-background: rgba(26, 38, 50, 0.86);
+  --input-background: rgba(12, 21, 30, 0.72);
   --soft-background: #202c38;
   --hover-background: #293746;
   --disabled-background: #273441;
@@ -42,9 +55,18 @@
   --disabled-text: #718092;
   --border-color: #344454;
   --control-border: #526477;
+  --input-hover-border: #7289a0;
   --table-border: #2d3b49;
   --accent-color: #59aaf8;
   --accent-soft: #234a70;
+  --accent-border: #315f8c;
+  --focus-ring: rgba(89, 170, 248, 0.17);
+  --placeholder-text: #8190a0;
+  --disabled-button: #526477;
+  --panel-glow: rgba(83, 116, 255, 0.18);
+  --panel-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+  --card-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  --card-shadow-hover: 0 18px 40px rgba(0, 0, 0, 0.24);
   --menu-shadow: rgba(0, 0, 0, 0.38);
   --procedure-background: #1b2632;
   --processed-background: #55491f;
@@ -58,9 +80,11 @@
 
 body {
   margin: 0;
-  background: var(--page-background);
+  background:
+    radial-gradient(circle at 12% 0%, var(--panel-glow), transparent 28%),
+    var(--page-background);
   color: var(--text-color);
-  font-family: sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   transition:
     background-color 180ms ease,
