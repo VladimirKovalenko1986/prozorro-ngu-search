@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { BUYERS } from "../../constants/buyers.js";
-import { DK_LABELS, getDkSuggestions, normalizeDkCode } from "../../constants/dk.js";
+import { loadDkCatalog } from "../../constants/dkCatalog.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.jsx";
@@ -250,20 +250,41 @@ function DkMultiSelect({
   selectedCodes,
   value,
 }) {
+  const [catalog, setCatalog] = useState(null);
+  const [catalogError, setCatalogError] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const ensureCatalog = useCallback(async () => {
+    if (catalog || catalogLoading) return catalog;
+
+    setCatalogLoading(true);
+    setCatalogError(false);
+
+    try {
+      const loadedCatalog = await loadDkCatalog();
+
+      setCatalog(loadedCatalog);
+      return loadedCatalog;
+    } catch {
+      setCatalogError(true);
+      return null;
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [catalog, catalogLoading]);
   const suggestions = useMemo(
     () =>
-      getDkSuggestions(value, 8).filter(
-        (option) => !selectedCodes.includes(option.code),
+      (catalog?.getSuggestions(value, 8) || []).filter(
+        (option) => !selectedCodes.some((item) => item.code === option.code),
       ),
-    [selectedCodes, value],
+    [catalog, selectedCodes, value],
   );
   const hasQuery = value.trim().length > 0;
   const showSuggestions = isOpen && hasQuery && suggestions.length > 0;
 
-  function selectCode(code) {
-    if (onAdd(code)) {
+  function selectCode(option) {
+    if (option && onAdd(option)) {
       setIsOpen(false);
       setActiveIndex(0);
     }
@@ -290,13 +311,9 @@ function DkMultiSelect({
       event.preventDefault();
 
       if (showSuggestions) {
-        selectCode(suggestions[activeIndex]?.code);
+        selectCode(suggestions[activeIndex]);
         return;
       }
-
-      const exactCode = normalizeDkCode(value);
-
-      if (DK_LABELS[exactCode]) selectCode(exactCode);
       return;
     }
 
@@ -316,12 +333,12 @@ function DkMultiSelect({
 
       {selectedCodes.length > 0 ? (
         <div className={css.dkChips} aria-label="Вибрані коди ДК">
-          {selectedCodes.map((code) => (
+          {selectedCodes.map(({ code, label }) => (
             <span className={css.dkChip} key={code}>
               <span className={css.dkChipCode}>{code}</span>
-              <span className={css.dkChipLabel}>{DK_LABELS[code]}</span>
+              <span className={css.dkChipLabel}>{label}</span>
               <button
-                aria-label={`Вилучити ${code} — ${DK_LABELS[code]}`}
+                aria-label={`Вилучити ${code} — ${label}`}
                 disabled={disabled}
                 onClick={() => onRemove(code)}
                 type="button"
@@ -346,8 +363,12 @@ function DkMultiSelect({
             onChange(event.target.value);
             setActiveIndex(0);
             setIsOpen(true);
+            void ensureCatalog();
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            void ensureCatalog();
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Введіть 3–4 цифри або частину назви"
           role="combobox"
@@ -364,7 +385,7 @@ function DkMultiSelect({
                 key={option.code}
                 onMouseDown={(event) => event.preventDefault()}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => selectCode(option.code)}
+                onClick={() => selectCode(option)}
                 role="option"
                 type="button"
               >
@@ -375,6 +396,15 @@ function DkMultiSelect({
           </div>
         ) : null}
       </div>
+
+      {catalogLoading ? (
+        <p className={css.dkLoading} aria-live="polite">Завантажую довідник ДК…</p>
+      ) : null}
+      {catalogError ? (
+        <button className={css.dkRetry} onClick={() => void ensureCatalog()} type="button">
+          Не вдалося завантажити довідник. Спробувати ще раз
+        </button>
+      ) : null}
 
       <div className={css.dkHint}>
         <span>

@@ -188,6 +188,23 @@
   font-weight: 600;
 }
 
+.dkLoading,
+.dkRetry {
+  margin: 8px 0 0;
+  color: var(--muted-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dkRetry {
+  border: 0;
+  background: transparent;
+  color: var(--accent-color);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
 select.control {
   appearance: none;
   background-image:

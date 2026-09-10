@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { fetchTenderSearchPage } from "../services/prozorroApi.js";
 import { BUYERS } from "../constants/buyers.js";
-import { DK_LABELS, getDkCodePrefix, normalizeDkCode } from "../constants/dk.js";
+import { getDkCodePrefix, normalizeDkCode } from "../constants/dk.js";
 import { ADD_ROW_ANIMATION_MS, MAX_SEARCH_PAGES, TENDER_REQUEST_DELAY_MS } from "../constants/search.js";
 import { STORAGE_KEYS } from "../constants/storage.js";
 import { FILTER_COLUMNS, TABLE_COLUMNS } from "../constants/table.js";
@@ -163,29 +163,26 @@ export function useProzorroSearch() {
   }
 
   function getActiveDkCodes() {
-    const draftCode = normalizeDkCode(dkCode);
-
-    if (!DK_LABELS[draftCode] || selectedDkCodes.includes(draftCode)) {
-      return selectedDkCodes;
-    }
-
-    return [...selectedDkCodes, draftCode];
+    return selectedDkCodes;
   }
 
-  function addDkCode(value) {
-    const code = normalizeDkCode(value);
+  function addDkCode(option) {
+    const code = normalizeDkCode(option?.code);
+    const label = option?.label?.trim();
 
-    if (!DK_LABELS[code]) return false;
+    if (!code || !label) return false;
 
     setSelectedDkCodes((current) =>
-      current.includes(code) ? current : [...current, code],
+      current.some((item) => item.code === code)
+        ? current
+        : [...current, { code, label }],
     );
     setDkCode("");
     return true;
   }
 
   function removeDkCode(code) {
-    setSelectedDkCodes((current) => current.filter((item) => item !== code));
+    setSelectedDkCodes((current) => current.filter((item) => item.code !== code));
   }
 
   function clearDkCodes() {
@@ -198,17 +195,15 @@ export function useProzorroSearch() {
 
     if (activeDkCodes.length === 0) return true;
 
-    return activeDkCodes.some((selectedCode) => {
-      const prefix = getDkCodePrefix(selectedCode);
+    return activeDkCodes.some(({ code }) => {
+      const prefix = getDkCodePrefix(code);
 
       return row.classificationIds?.some((code) => code.startsWith(prefix));
     });
   }
 
   function hasInvalidDkCode() {
-    const draftCode = normalizeDkCode(dkCode);
-
-    if (!dkCode.trim() || DK_LABELS[draftCode]) return false;
+    if (!dkCode.trim()) return false;
 
     setStatus("Оберіть код ДК зі списку підказок");
     setSearchFinishedMessage("");
@@ -279,11 +274,6 @@ export function useProzorroSearch() {
     if (hasInvalidDkCode()) return;
 
     const activeDkCodes = getActiveDkCodes();
-
-    if (activeDkCodes.length > selectedDkCodes.length) {
-      setSelectedDkCodes(activeDkCodes);
-      setDkCode("");
-    }
 
     if (!buyer?.edrpous?.length) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
@@ -463,13 +453,6 @@ export function useProzorroSearch() {
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
 
     if (hasInvalidDkCode()) return;
-
-    const activeDkCodes = getActiveDkCodes();
-
-    if (activeDkCodes.length > selectedDkCodes.length) {
-      setSelectedDkCodes(activeDkCodes);
-      setDkCode("");
-    }
 
     if (!query) {
       setStatus("Введіть номер договору або його частину");
