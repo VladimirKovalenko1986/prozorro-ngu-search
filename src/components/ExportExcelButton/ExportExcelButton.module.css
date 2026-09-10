@@ -49,3 +49,9 @@
 .button:active:not(:disabled) {
   transform: translateY(1px) scale(0.99);
 }
+
+@media (max-width: 560px) {
+  .button {
+    width: 100%;
+  }
+}

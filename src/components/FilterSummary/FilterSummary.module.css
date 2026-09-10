@@ -29,3 +29,14 @@
 .clearButton:hover:not(:disabled) {
   background: var(--hover-background);
 }
+
+@media (max-width: 560px) {
+  .summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .clearButton {
+    width: 100%;
+  }
+}

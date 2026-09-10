@@ -365,6 +365,61 @@ select.control {
   }
 }
 
+@media (min-width: 2400px) {
+  .panel {
+    padding: 46px;
+    border-radius: 30px;
+  }
+
+  .header {
+    margin-bottom: 36px;
+  }
+
+  .brandMark {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    font-size: 30px;
+  }
+
+  .controls {
+    grid-template-columns: minmax(0, 1.7fr) minmax(560px, 0.9fr);
+    gap: 24px;
+  }
+
+  .searchCard {
+    border-radius: 22px;
+    padding: 30px;
+  }
+
+  .primaryControls {
+    grid-template-columns: minmax(230px, 1fr) repeat(2, minmax(220px, 0.85fr)) auto;
+    gap: 18px;
+  }
+
+  .control,
+  .remoteSearchInput,
+  .primaryButton,
+  .secondaryButton {
+    height: 62px;
+  }
+
+  .control,
+  .remoteSearchInput {
+    font-size: 19px;
+  }
+
+  .sectionHeading h2 {
+    font-size: 21px;
+  }
+
+  .sectionHeading p,
+  .controlLabel,
+  .status {
+    font-size: 16px;
+  }
+}
+
 @media (max-width: 820px) {
   .panel {
     border-radius: 18px;
@@ -381,11 +436,19 @@ select.control {
   .primaryButton {
     width: 100%;
   }
+
+  .utilityRow {
+    align-items: stretch;
+  }
 }
 
 @media (max-width: 560px) {
   .panel {
     padding: 18px;
+  }
+
+  .header {
+    flex-direction: column;
   }
 
   .header,
@@ -414,6 +477,38 @@ select.control {
 
   .secondaryButton {
     width: 100%;
+  }
+
+  .sectionHeading p {
+    font-size: 13px;
+  }
+
+  .control,
+  .remoteSearchInput {
+    font-size: 16px;
+  }
+
+  .status {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand {
+    gap: 11px;
+  }
+
+  .brandMark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .searchCard {
+    padding: 14px;
   }
 }
 

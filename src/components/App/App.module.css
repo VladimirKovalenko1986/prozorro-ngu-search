@@ -5,6 +5,29 @@
   padding: clamp(16px, 2.4vw, 36px);
 }
 
+@media (min-width: 2400px) {
+  .page {
+    width: min(2800px, calc(100% - 96px));
+    padding: 48px 0;
+  }
+
+  .emptyPanel {
+    padding: 32px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 10px;
+  }
+
+  .emptyPanel {
+    border-radius: 15px;
+    padding: 18px;
+  }
+}
+
 .emptyPanel {
   background: var(--panel-background);
   border: 1px solid var(--border-color);

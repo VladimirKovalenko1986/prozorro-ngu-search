@@ -36,3 +36,13 @@
   opacity: 1;
   background: rgba(22, 135, 72, 0.95);
 }
+
+@media (max-width: 600px) {
+  .button {
+    right: 16px;
+    bottom: 16px;
+    width: 48px;
+    height: 48px;
+    font-size: 26px;
+  }
+}

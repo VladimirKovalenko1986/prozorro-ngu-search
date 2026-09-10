@@ -15,7 +15,8 @@
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
-    color 180ms ease;
+    color 180ms ease,
+    transform 180ms ease;
   backdrop-filter: blur(10px);
 }
 
@@ -37,4 +38,10 @@
 
 .button:active {
   transform: translateY(0) scale(0.98);
+}
+
+@media (max-width: 560px) {
+  .button {
+    width: 100%;
+  }
 }
