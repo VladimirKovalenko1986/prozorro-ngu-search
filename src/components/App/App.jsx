@@ -18,21 +18,17 @@ function App() {
         dateFrom={search.dateFrom}
         dateTo={search.dateTo}
         disabled={search.loading}
-        dkFilterEnabled={search.dkFilterEnabled}
         onBuyerChange={search.handleBuyerChange}
         onContractSearch={search.handleContractRemoteSearch}
         onContractSearchChange={search.setContractSearch}
         onDateFromChange={search.setDateFrom}
         onDateToChange={search.setDateTo}
-        onDkFilterEnabledChange={search.setDkFilterEnabled}
-        onDkFilterValueChange={search.setSelectedDkCode}
         onSearch={search.handleSearch}
         onStorageImport={search.handleStorageImport}
         searchFinishedMessage={search.searchFinishedMessage}
         showBuyerColumn={search.showBuyerColumn}
         status={search.status}
         storageKeys={STORAGE_KEYS}
-        selectedDkCode={search.selectedDkCode}
         tableResults={search.filteredResults}
       />
 

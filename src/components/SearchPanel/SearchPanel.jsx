@@ -1,5 +1,4 @@
 import { BUYERS } from "../../constants/buyers.js";
-import { DK_OPTIONS } from "../../constants/dk.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
 import css from "./SearchPanel.module.css";
@@ -11,21 +10,17 @@ export default function SearchPanel({
   dateFrom,
   dateTo,
   disabled,
-  dkFilterEnabled,
   onBuyerChange,
   onContractSearch,
   onContractSearchChange,
   onDateFromChange,
   onDateToChange,
-  onDkFilterEnabledChange,
-  onDkFilterValueChange,
   onSearch,
   onStorageImport,
   searchFinishedMessage,
   showBuyerColumn,
   status,
   storageKeys,
-  selectedDkCode,
   tableResults,
 }) {
   return (
@@ -86,32 +81,6 @@ export default function SearchPanel({
           onImport={onStorageImport}
           storageKeys={storageKeys}
         />
-
-        <label className={`${css.controlLabel} ${css.dkFilter}`}>
-          <span className={css.dkCheckboxLabel}>
-            <input
-              checked={dkFilterEnabled}
-              disabled={disabled}
-              onChange={(event) =>
-                onDkFilterEnabledChange(event.target.checked)
-              }
-              type="checkbox"
-            />
-            Пошук по ДК
-          </span>
-          <select
-            className={css.control}
-            disabled={disabled || !dkFilterEnabled}
-            value={selectedDkCode}
-            onChange={(event) => onDkFilterValueChange(event.target.value)}
-          >
-            {DK_OPTIONS.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
 
         <SearchBox
           disabled={disabled}

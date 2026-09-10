@@ -77,20 +77,6 @@ select.control {
   margin-top: 8px;
 }
 
-.dkFilter {
-  min-width: 260px;
-}
-
-.dkCheckboxLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.dkCheckboxLabel input {
-  flex: 0 0 auto;
-}
-
 .remoteSearchControl {
   display: flex;
   gap: 12px;

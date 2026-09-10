@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { fetchTenderSearchPage } from "../services/prozorroApi.js";
 import { BUYERS } from "../constants/buyers.js";
-import { DK_OPTIONS } from "../constants/dk.js";
 import { ADD_ROW_ANIMATION_MS, MAX_SEARCH_PAGES, TENDER_REQUEST_DELAY_MS } from "../constants/search.js";
 import { STORAGE_KEYS } from "../constants/storage.js";
 import { FILTER_COLUMNS, TABLE_COLUMNS } from "../constants/table.js";
@@ -40,12 +39,7 @@ export function useProzorroSearch() {
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
   const [filters, setFilters] = useState({});
   const [contractSearch, setContractSearch] = useState("");
-  const [dkFilterEnabled, setDkFilterEnabled] = useState(false);
-  const [selectedDkCode, setSelectedDkCode] = useState(DK_OPTIONS[0].code);
   const showBuyerColumn = selectedBuyer === "НГУ";
-  const selectedDkOption = DK_OPTIONS.find(
-    (option) => option.code === selectedDkCode,
-  ) || DK_OPTIONS[0];
   const tableColumns = useMemo(
     () =>
       TABLE_COLUMNS.filter(
@@ -95,14 +89,6 @@ export function useProzorroSearch() {
   function clearFilters() {
     setFilters({});
     setContractSearch("");
-  }
-
-  function getDkRowMatcher(row) {
-    if (!dkFilterEnabled) return true;
-
-    return row.classificationIds?.some((code) =>
-      code.startsWith(selectedDkOption.prefix),
-    );
   }
 
   function handleBuyerChange(value) {
@@ -242,7 +228,7 @@ export function useProzorroSearch() {
 
               procedureResult = await buildProcedureForItem(
                 item,
-                getDkRowMatcher,
+                undefined,
                 details,
               );
             } catch {
@@ -255,11 +241,7 @@ export function useProzorroSearch() {
                 null,
                 null,
                 null,
-              ).filter(getDkRowMatcher);
-
-              if (fallbackRows.length === 0) {
-                continue;
-              }
+              );
 
               procedureResult = buildProcedureResult(
                 fallbackDetails,
@@ -296,7 +278,7 @@ export function useProzorroSearch() {
       }
 
       setStatus(
-        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${dkFilterEnabled ? `. ДК: ${selectedDkOption.label}` : ""}`,
+        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}`,
       );
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
@@ -362,8 +344,7 @@ export function useProzorroSearch() {
 
             try {
               const procedureResult = await buildProcedureForItem(item, (row) =>
-                normalizeText(row.contractNumber).includes(query) &&
-                getDkRowMatcher(row),
+                normalizeText(row.contractNumber).includes(query),
               );
 
               if (!procedureResult) {
@@ -415,7 +396,6 @@ export function useProzorroSearch() {
     contractSearch,
     dateFrom,
     dateTo,
-    dkFilterEnabled,
     filterOptions,
     filteredResults,
     filters,
@@ -429,12 +409,9 @@ export function useProzorroSearch() {
     results,
     searchFinishedMessage,
     selectedBuyer,
-    selectedDkCode,
     setContractSearch,
     setDateFrom,
     setDateTo,
-    setDkFilterEnabled,
-    setSelectedDkCode,
     showBuyerColumn,
     status,
     tableColumns,
