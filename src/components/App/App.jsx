@@ -32,9 +32,11 @@ function App() {
         onDkCodeChange={search.setDkCode}
         onDkCodeRemove={search.removeDkCode}
         onSearch={search.handleSearch}
+        onStopSearch={search.handleStopSearch}
         onStorageImport={search.handleStorageImport}
         onThemeToggle={toggleTheme}
         searchFinishedMessage={search.searchFinishedMessage}
+        searchProgress={search.searchProgress}
         showBuyerColumn={search.showBuyerColumn}
         status={search.status}
         storageKeys={STORAGE_KEYS}

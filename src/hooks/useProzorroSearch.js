@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { fetchTenderSearchPage } from "../services/prozorroApi.js";
 import { BUYERS } from "../constants/buyers.js";
 import { DK_LABELS, getDkCodePrefix, normalizeDkCode } from "../constants/dk.js";
@@ -22,6 +22,17 @@ import {
   getSearchItemProcedureDate,
 } from "../domain/prozorroRows.js";
 
+const EMPTY_SEARCH_PROGRESS = {
+  buyerCount: 0,
+  buyerIndex: 0,
+  currentPage: 0,
+  found: 0,
+  pagesChecked: 0,
+  proceduresChecked: 0,
+  stage: "idle",
+  totalPages: 0,
+};
+
 export function useProzorroSearch() {
   const [selectedBuyer, setSelectedBuyer] = useState(BUYERS[0].label);
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
@@ -42,6 +53,10 @@ export function useProzorroSearch() {
   const [contractSearch, setContractSearch] = useState("");
   const [dkCode, setDkCode] = useState("");
   const [selectedDkCodes, setSelectedDkCodes] = useState([]);
+  const [searchProgress, setSearchProgress] = useState(EMPTY_SEARCH_PROGRESS);
+  const searchProgressRef = useRef(EMPTY_SEARCH_PROGRESS);
+  const searchControllerRef = useRef(null);
+  const cancelRequestedRef = useRef(false);
   const showBuyerColumn = selectedBuyer === "НГУ";
   const tableColumns = useMemo(
     () =>
@@ -79,6 +94,59 @@ export function useProzorroSearch() {
   const hasActiveFilters = Object.values(filters).some(
     (values) => values.length > 0,
   );
+
+  function updateSearchProgress(update) {
+    const next = typeof update === "function"
+      ? update(searchProgressRef.current)
+      : { ...searchProgressRef.current, ...update };
+
+    searchProgressRef.current = next;
+    setSearchProgress(next);
+  }
+
+  function startSearch(buyerCount) {
+    const controller = new AbortController();
+    const progress = {
+      ...EMPTY_SEARCH_PROGRESS,
+      buyerCount,
+      stage: "running",
+    };
+
+    searchControllerRef.current = controller;
+    cancelRequestedRef.current = false;
+    searchProgressRef.current = progress;
+    setSearchProgress(progress);
+    setLoading(true);
+
+    return controller;
+  }
+
+  function handleStopSearch() {
+    if (!loading || !searchControllerRef.current) return;
+
+    cancelRequestedRef.current = true;
+    setStatus("Зупиняю пошук...");
+    searchControllerRef.current.abort();
+  }
+
+  function handleSearchError(error, foundCount) {
+    if (cancelRequestedRef.current) {
+      const progress = searchProgressRef.current;
+
+      updateSearchProgress({ found: foundCount, stage: "stopped" });
+      setStatus(
+        `Пошук зупинено. Перевірено сторінок: ${progress.pagesChecked}, процедур: ${progress.proceduresChecked}.`,
+      );
+      setSearchFinishedMessage(
+        `Пошук зупинено. Збережено знайдені результати: ${foundCount}.`,
+      );
+      return;
+    }
+
+    updateSearchProgress({ found: foundCount, stage: "error" });
+    setStatus(`Помилка: ${error.message}`);
+    setSearchFinishedMessage("");
+  }
 
   function toggleFilterValue(key, value) {
     setFilters((current) => ({
@@ -224,7 +292,8 @@ export function useProzorroSearch() {
       return;
     }
 
-    setLoading(true);
+    const controller = startSearch(buyer.edrpous.length);
+    const { signal } = controller;
     setResults([]);
     setAddingProcedureTitle("");
     setRecentlyAddedProcedureId("");
@@ -242,6 +311,7 @@ export function useProzorroSearch() {
           const json = await fetchTenderSearchPage({
             edrpou,
             page,
+            signal,
           });
           const rows = json.data || [];
           const edrpouTotal = json.total || rows.length;
@@ -251,6 +321,12 @@ export function useProzorroSearch() {
 
           totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
 
+          updateSearchProgress({
+            buyerIndex: edrpouIndex + 1,
+            currentPage: page,
+            totalPages,
+          });
+
           setStatus(
             `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Перевіряю сторінку ${page} з ${totalPages}. Уже показано: ${found.length}`,
           );
@@ -259,6 +335,10 @@ export function useProzorroSearch() {
             pageProcedureDates.length === rows.length &&
             pageProcedureDates.every((procedureDate) => procedureDate < searchRange.dateFrom)
           ) {
+            updateSearchProgress((current) => ({
+              ...current,
+              pagesChecked: current.pagesChecked + 1,
+            }));
             break;
           }
 
@@ -266,6 +346,11 @@ export function useProzorroSearch() {
             if (foundTenderIds.has(item.tenderID)) {
               continue;
             }
+
+            updateSearchProgress((current) => ({
+              ...current,
+              proceduresChecked: current.proceduresChecked + 1,
+            }));
 
             const itemProcedureDate = getSearchItemProcedureDate(item);
 
@@ -283,11 +368,11 @@ export function useProzorroSearch() {
             let procedureResult;
 
             try {
-              const details = await fetchFullTenderDetails(item);
+              const details = await fetchFullTenderDetails(item, signal);
               const procedureDate = getProcedureDate(details, item);
 
               if (!isDateInPeriod(procedureDate, searchRange.dateFrom, searchRange.dateTo)) {
-                await wait(TENDER_REQUEST_DELAY_MS);
+                await wait(TENDER_REQUEST_DELAY_MS, signal);
                 continue;
               }
 
@@ -295,8 +380,11 @@ export function useProzorroSearch() {
                 item,
                 getDkRowMatcher,
                 details,
+                signal,
               );
-            } catch {
+            } catch (error) {
+              if (signal.aborted) throw error;
+
               const fallbackDetails = buildFallbackDetails(item);
               const fallbackRows = buildLotRow(
                 fallbackDetails,
@@ -324,16 +412,22 @@ export function useProzorroSearch() {
             }
 
             setAddingProcedureTitle(procedureResult.title);
-            await wait(ADD_ROW_ANIMATION_MS);
+            await wait(ADD_ROW_ANIMATION_MS, signal);
 
             foundTenderIds.add(procedureResult.tenderID);
             found.push(procedureResult);
             setRecentlyAddedProcedureId(procedureResult.id);
             setResults([...found]);
             setAddingProcedureTitle("");
+            updateSearchProgress({ found: found.length });
 
-            await wait(TENDER_REQUEST_DELAY_MS);
+            await wait(TENDER_REQUEST_DELAY_MS, signal);
           }
+
+          updateSearchProgress((current) => ({
+            ...current,
+            pagesChecked: current.pagesChecked + 1,
+          }));
 
           if (
             pageProcedureDates.length === rows.length &&
@@ -352,12 +446,15 @@ export function useProzorroSearch() {
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
       );
+      updateSearchProgress({ found: found.length, stage: "completed" });
     } catch (error) {
-      setStatus(`Помилка: ${error.message}`);
-      setSearchFinishedMessage("");
+      handleSearchError(error, found.length);
     } finally {
       setLoading(false);
       setAddingProcedureTitle("");
+      if (searchControllerRef.current === controller) {
+        searchControllerRef.current = null;
+      }
     }
   }
 
@@ -386,7 +483,8 @@ export function useProzorroSearch() {
       return;
     }
 
-    setLoading(true);
+    const controller = startSearch(buyer.edrpous.length);
+    const { signal } = controller;
     setResults([]);
     setFilters({});
     setAddingProcedureTitle("");
@@ -402,11 +500,16 @@ export function useProzorroSearch() {
         let totalPages = 1;
 
         while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
-          const json = await fetchTenderSearchPage({ edrpou, page });
+          const json = await fetchTenderSearchPage({ edrpou, page, signal });
           const rows = json.data || [];
           const edrpouTotal = json.total || rows.length;
 
           totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
+          updateSearchProgress({
+            buyerIndex: edrpouIndex + 1,
+            currentPage: page,
+            totalPages,
+          });
           setStatus(
             `Пошук договору "${contractSearch}". ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Сторінка ${page} з ${totalPages}. Знайдено: ${found.length}`,
           );
@@ -416,37 +519,54 @@ export function useProzorroSearch() {
               continue;
             }
 
+            updateSearchProgress((current) => ({
+              ...current,
+              proceduresChecked: current.proceduresChecked + 1,
+            }));
+
             setStatus(
               `Пошук договору "${contractSearch}". Перевіряю процедуру ${itemIndex + 1} з ${rows.length}. Знайдено: ${found.length}`,
             );
 
             try {
-              const procedureResult = await buildProcedureForItem(item, (row) =>
-                normalizeText(row.contractNumber).includes(query) &&
-                getDkRowMatcher(row),
+              const procedureResult = await buildProcedureForItem(
+                item,
+                (row) =>
+                  normalizeText(row.contractNumber).includes(query) &&
+                  getDkRowMatcher(row),
+                null,
+                signal,
               );
 
               if (!procedureResult) {
-                await wait(TENDER_REQUEST_DELAY_MS);
+                await wait(TENDER_REQUEST_DELAY_MS, signal);
                 continue;
               }
 
               setAddingProcedureTitle(procedureResult.title);
-              await wait(ADD_ROW_ANIMATION_MS);
+              await wait(ADD_ROW_ANIMATION_MS, signal);
 
               foundTenderIds.add(procedureResult.tenderID);
               found.push(procedureResult);
               setRecentlyAddedProcedureId(procedureResult.id);
               setResults([...found]);
               setAddingProcedureTitle("");
-            } catch {
+              updateSearchProgress({ found: found.length });
+            } catch (error) {
+              if (signal.aborted) throw error;
+
               setStatus(
                 `Пошук договору "${contractSearch}". Prozorro не відповів по ${item.tenderID || "процедурі"}. Продовжую.`,
               );
             }
 
-            await wait(TENDER_REQUEST_DELAY_MS);
+            await wait(TENDER_REQUEST_DELAY_MS, signal);
           }
+
+          updateSearchProgress((current) => ({
+            ...current,
+            pagesChecked: current.pagesChecked + 1,
+          }));
 
           page += 1;
         }
@@ -458,12 +578,15 @@ export function useProzorroSearch() {
       setSearchFinishedMessage(
         `Пошук договору завершено. Знайдено: ${found.length} процедур.`,
       );
+      updateSearchProgress({ found: found.length, stage: "completed" });
     } catch (error) {
-      setStatus(`Помилка: ${error.message}`);
-      setSearchFinishedMessage("");
+      handleSearchError(error, found.length);
     } finally {
       setLoading(false);
       setAddingProcedureTitle("");
+      if (searchControllerRef.current === controller) {
+        searchControllerRef.current = null;
+      }
     }
   }
 
@@ -484,6 +607,7 @@ export function useProzorroSearch() {
     handleBuyerChange,
     handleContractRemoteSearch,
     handleSearch,
+    handleStopSearch,
     handleStorageImport,
     hasActiveFilters,
     loading,
@@ -491,6 +615,7 @@ export function useProzorroSearch() {
     results,
     removeDkCode,
     searchFinishedMessage,
+    searchProgress,
     selectedBuyer,
     selectedDkCodes,
     setContractSearch,

@@ -25,9 +25,11 @@ export default function SearchPanel({
   onDkCodeClear,
   onDkCodeRemove,
   onSearch,
+  onStopSearch,
   onStorageImport,
   onThemeToggle,
   searchFinishedMessage,
+  searchProgress,
   showBuyerColumn,
   status,
   storageKeys,
@@ -154,15 +156,13 @@ export default function SearchPanel({
         {status}
       </p>
 
-      {disabled ? (
-        <div className={css.searchActivity} aria-live="polite">
-          <span className={css.searchSpinner} aria-hidden="true" />
-          <span>
-            {addingProcedureTitle
-              ? `Додаю рядок: ${addingProcedureTitle}`
-              : "Шукаю процедури..."}
-          </span>
-        </div>
+      {searchProgress.stage !== "idle" ? (
+        <SearchProgress
+          addingProcedureTitle={addingProcedureTitle}
+          disabled={disabled}
+          onStop={onStopSearch}
+          progress={searchProgress}
+        />
       ) : null}
 
       {searchFinishedMessage ? (
@@ -170,6 +170,73 @@ export default function SearchPanel({
           {searchFinishedMessage}
         </div>
       ) : null}
+    </section>
+  );
+}
+
+function SearchProgress({ addingProcedureTitle, disabled, onStop, progress }) {
+  const progressPercent = progress.stage === "completed"
+    ? 100
+    : progress.totalPages
+      ? Math.min(100, Math.round((progress.currentPage / progress.totalPages) * 100))
+      : 0;
+  const stageLabels = {
+    completed: "Пошук завершено",
+    error: "Пошук перервано помилкою",
+    running: "Пошук триває",
+    stopped: "Пошук зупинено",
+  };
+
+  return (
+    <section className={css.progressPanel} aria-live="polite">
+      <div className={css.progressHeader}>
+        <div className={css.progressTitle}>
+          {disabled ? <span className={css.searchSpinner} aria-hidden="true" /> : null}
+          <div>
+            <strong>{stageLabels[progress.stage]}</strong>
+            <span>
+              {addingProcedureTitle
+                ? `Додаю: ${addingProcedureTitle}`
+                : progress.buyerIndex
+                  ? `Замовник ${progress.buyerIndex} з ${progress.buyerCount} · сторінка ${progress.currentPage} з ${progress.totalPages}`
+                  : "Готую дані для пошуку"}
+            </span>
+          </div>
+        </div>
+
+        {disabled ? (
+          <button className={css.stopButton} onClick={onStop} type="button">
+            <span aria-hidden="true">■</span>
+            Зупинити
+          </button>
+        ) : null}
+      </div>
+
+      <div
+        aria-label="Прогрес перевірки сторінок поточного замовника"
+        aria-valuemax="100"
+        aria-valuemin="0"
+        aria-valuenow={progressPercent}
+        className={css.progressTrack}
+        role="progressbar"
+      >
+        <span style={{ width: `${progressPercent}%` }} />
+      </div>
+
+      <div className={css.progressStats}>
+        <span>
+          <strong>{progress.pagesChecked}</strong>
+          Перевірено сторінок
+        </span>
+        <span>
+          <strong>{progress.proceduresChecked}</strong>
+          Перевірено процедур
+        </span>
+        <span>
+          <strong>{progress.found}</strong>
+          Знайдено
+        </span>
+      </div>
     </section>
   );
 }

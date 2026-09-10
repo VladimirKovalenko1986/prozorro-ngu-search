@@ -395,18 +395,20 @@ export function buildFallbackDetails(searchItem) {
   };
 }
 
-export async function fetchFullTenderDetails(searchItem) {
+export async function fetchFullTenderDetails(searchItem, signal) {
   let summary;
 
   try {
-    summary = await fetchTenderSummary(searchItem.tenderID);
-  } catch {
+    summary = await fetchTenderSummary(searchItem.tenderID, signal);
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return buildFallbackDetails(searchItem);
   }
 
   try {
-    return await fetchTenderDetails(summary.id);
-  } catch {
+    return await fetchTenderDetails(summary.id, signal);
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return {
       ...summary,
       dateCreated:
@@ -455,15 +457,16 @@ export async function buildProcedureForItem(
   item,
   rowMatcher = () => true,
   loadedDetails = null,
+  signal,
 ) {
-  const details = loadedDetails || await fetchFullTenderDetails(item);
+  const details = loadedDetails || await fetchFullTenderDetails(item, signal);
   const lots = details.lots?.length ? details.lots : [null];
   const lotRows = [];
 
   for (const [lotIndex, lot] of lots.entries()) {
     const award = findAwardForLot(details, lot);
     const contract = findContractForLot(details, lot, award);
-    const contractDetails = await fetchContractDetails(contract?.id);
+    const contractDetails = await fetchContractDetails(contract?.id, signal);
     const rows = buildLotRow(
       details,
       lot,
