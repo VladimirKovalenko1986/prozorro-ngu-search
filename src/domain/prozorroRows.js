@@ -121,6 +121,12 @@ export function getItemDescription(item) {
   return item?.description || item?.title || "";
 }
 
+export function getClassificationIds(items = []) {
+  return items
+    .map((item) => item.classification?.id)
+    .filter(Boolean);
+}
+
 export function getSpecificationTitle(items) {
   return items
     .map((item, index) => `${index + 1}. ${getItemDescription(item)}`)
@@ -286,6 +292,7 @@ export function buildLotRow(
   const baseRow = {
     lotNumber: lot && lotsCount > 1 ? lotIndex + 1 : null,
     lotTitle,
+    classificationIds: getClassificationIds(contractItems),
     unitName: getUnitName(contractItems),
     supplierName: supplier?.name || "Немає контрагента",
     expectedAmount: expected.amount,
@@ -325,6 +332,7 @@ export function buildLotRow(
         {
           ...baseRow,
           id: `${details.id}-${lot?.id || contract?.id || lotIndex}`,
+          classificationIds: getClassificationIds(visibleSpecificationItems),
           specificationTitle: getSpecificationTitle(visibleSpecificationItems),
           specificationQuantities: getSpecificationQuantities(
             visibleSpecificationItems,
@@ -346,6 +354,7 @@ export function buildLotRow(
       return {
         ...baseRow,
         id: `${details.id}-${lot?.id || contract?.id || lotIndex}-${item.id || itemIndex}`,
+        classificationIds: getClassificationIds([item]),
         specificationTitle: getItemDescription(item),
         quantity: itemQuantity,
         unitName: getItemUnitName(item),

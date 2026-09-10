@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { BUYERS } from "../../constants/buyers.js";
+import { getDkSuggestions } from "../../constants/dk.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
 import css from "./SearchPanel.module.css";
@@ -10,11 +12,13 @@ export default function SearchPanel({
   dateFrom,
   dateTo,
   disabled,
+  dkCode,
   onBuyerChange,
   onContractSearch,
   onContractSearchChange,
   onDateFromChange,
   onDateToChange,
+  onDkCodeChange,
   onSearch,
   onStorageImport,
   searchFinishedMessage,
@@ -23,6 +27,8 @@ export default function SearchPanel({
   storageKeys,
   tableResults,
 }) {
+  const dkSuggestions = useMemo(() => getDkSuggestions(dkCode), [dkCode]);
+
   return (
     <section className={css.panel} id="search-panel">
       <h1 className={css.title}>Пошук договорів Prozorro</h1>
@@ -81,6 +87,26 @@ export default function SearchPanel({
           onImport={onStorageImport}
           storageKeys={storageKeys}
         />
+
+        <label className={`${css.controlLabel} ${css.dkSearch}`}>
+          Пошук по ДК
+          <input
+            className={css.control}
+            disabled={disabled}
+            list="dk-021-options"
+            onChange={(event) => onDkCodeChange(event.target.value)}
+            placeholder="Введіть 3–4 цифри або частину назви"
+            type="search"
+            value={dkCode}
+          />
+          <datalist id="dk-021-options">
+            {dkSuggestions.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label}
+              </option>
+            ))}
+          </datalist>
+        </label>
 
         <SearchBox
           disabled={disabled}

@@ -18,11 +18,13 @@ function App() {
         dateFrom={search.dateFrom}
         dateTo={search.dateTo}
         disabled={search.loading}
+        dkCode={search.dkCode}
         onBuyerChange={search.handleBuyerChange}
         onContractSearch={search.handleContractRemoteSearch}
         onContractSearchChange={search.setContractSearch}
         onDateFromChange={search.setDateFrom}
         onDateToChange={search.setDateTo}
+        onDkCodeChange={search.setDkCode}
         onSearch={search.handleSearch}
         onStorageImport={search.handleStorageImport}
         searchFinishedMessage={search.searchFinishedMessage}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { fetchTenderSearchPage } from "../services/prozorroApi.js";
 import { BUYERS } from "../constants/buyers.js";
+import { DK_LABELS, getDkCodePrefix, normalizeDkCode } from "../constants/dk.js";
 import { ADD_ROW_ANIMATION_MS, MAX_SEARCH_PAGES, TENDER_REQUEST_DELAY_MS } from "../constants/search.js";
 import { STORAGE_KEYS } from "../constants/storage.js";
 import { FILTER_COLUMNS, TABLE_COLUMNS } from "../constants/table.js";
@@ -39,7 +40,10 @@ export function useProzorroSearch() {
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
   const [filters, setFilters] = useState({});
   const [contractSearch, setContractSearch] = useState("");
+  const [dkCode, setDkCode] = useState("");
   const showBuyerColumn = selectedBuyer === "НГУ";
+  const selectedDkCode = normalizeDkCode(dkCode);
+  const selectedDkLabel = DK_LABELS[selectedDkCode] || "";
   const tableColumns = useMemo(
     () =>
       TABLE_COLUMNS.filter(
@@ -89,6 +93,22 @@ export function useProzorroSearch() {
   function clearFilters() {
     setFilters({});
     setContractSearch("");
+  }
+
+  function getDkRowMatcher(row) {
+    if (!selectedDkCode) return true;
+
+    const prefix = getDkCodePrefix(selectedDkCode);
+
+    return row.classificationIds?.some((code) => code.startsWith(prefix));
+  }
+
+  function hasInvalidDkCode() {
+    if (!dkCode.trim() || selectedDkLabel) return false;
+
+    setStatus("Оберіть код ДК зі списку підказок");
+    setSearchFinishedMessage("");
+    return true;
   }
 
   function handleBuyerChange(value) {
@@ -151,6 +171,8 @@ export function useProzorroSearch() {
 
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
     const searchRange = normalizeDateRange(dateFrom, dateTo);
+
+    if (hasInvalidDkCode()) return;
 
     if (!buyer?.edrpous?.length) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
@@ -228,7 +250,7 @@ export function useProzorroSearch() {
 
               procedureResult = await buildProcedureForItem(
                 item,
-                undefined,
+                getDkRowMatcher,
                 details,
               );
             } catch {
@@ -241,7 +263,11 @@ export function useProzorroSearch() {
                 null,
                 null,
                 null,
-              );
+              ).filter(getDkRowMatcher);
+
+              if (fallbackRows.length === 0) {
+                continue;
+              }
 
               procedureResult = buildProcedureResult(
                 fallbackDetails,
@@ -278,7 +304,7 @@ export function useProzorroSearch() {
       }
 
       setStatus(
-        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}`,
+        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${selectedDkCode ? `. ДК: ${selectedDkCode} — ${selectedDkLabel}` : ""}`,
       );
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
@@ -295,6 +321,8 @@ export function useProzorroSearch() {
   async function handleContractRemoteSearch() {
     const query = normalizeText(contractSearch);
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
+
+    if (hasInvalidDkCode()) return;
 
     if (!query) {
       setStatus("Введіть номер договору або його частину");
@@ -344,7 +372,8 @@ export function useProzorroSearch() {
 
             try {
               const procedureResult = await buildProcedureForItem(item, (row) =>
-                normalizeText(row.contractNumber).includes(query),
+                normalizeText(row.contractNumber).includes(query) &&
+                getDkRowMatcher(row),
               );
 
               if (!procedureResult) {
@@ -396,6 +425,7 @@ export function useProzorroSearch() {
     contractSearch,
     dateFrom,
     dateTo,
+    dkCode,
     filterOptions,
     filteredResults,
     filters,
@@ -412,6 +442,7 @@ export function useProzorroSearch() {
     setContractSearch,
     setDateFrom,
     setDateTo,
+    setDkCode,
     showBuyerColumn,
     status,
     tableColumns,
