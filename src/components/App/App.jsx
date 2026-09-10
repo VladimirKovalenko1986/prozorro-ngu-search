@@ -28,13 +28,10 @@ function App() {
         onDkFilterValueChange={search.setSelectedDkCode}
         onSearch={search.handleSearch}
         onStorageImport={search.handleStorageImport}
-        onSubjectSearch={search.handleSubjectRemoteSearch}
-        onSubjectSearchChange={search.setSubjectSearch}
         searchFinishedMessage={search.searchFinishedMessage}
         showBuyerColumn={search.showBuyerColumn}
         status={search.status}
         storageKeys={STORAGE_KEYS}
-        subjectSearch={search.subjectSearch}
         selectedDkCode={search.selectedDkCode}
         tableResults={search.filteredResults}
       />

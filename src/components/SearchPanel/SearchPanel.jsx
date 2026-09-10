@@ -21,13 +21,10 @@ export default function SearchPanel({
   onDkFilterValueChange,
   onSearch,
   onStorageImport,
-  onSubjectSearch,
-  onSubjectSearchChange,
   searchFinishedMessage,
   showBuyerColumn,
   status,
   storageKeys,
-  subjectSearch,
   selectedDkCode,
   tableResults,
 }) {
@@ -127,16 +124,6 @@ export default function SearchPanel({
           value={contractSearch}
         />
 
-        <SearchBox
-          disabled={disabled}
-          label="Пошук по предмету закупівлі"
-          onClear={() => onSubjectSearchChange("")}
-          onSearch={onSubjectSearch}
-          onValueChange={onSubjectSearchChange}
-          placeholder="Наприклад: картопля або телефон"
-          searchButtonLabel="Знайти предмет"
-          value={subjectSearch}
-        />
       </form>
 
       <p className={css.status}>{status}</p>

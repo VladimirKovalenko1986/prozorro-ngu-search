@@ -38,13 +38,10 @@ async function fetchJson(url, options) {
   return response.json();
 }
 
-export async function fetchTenderSearchPage({ edrpou, page, searchText = "" }) {
+export async function fetchTenderSearchPage({ edrpou, page }) {
   const params = new URLSearchParams();
 
   params.append("buyer[]", edrpou);
-  if (searchText.trim()) {
-    params.append("text", searchText.trim());
-  }
   params.append("page", String(page));
 
   return fetchJson(`${SITE_API_PREFIX}/search/tenders?${params}`, {
