@@ -17,6 +17,7 @@ function App() {
         addingProcedureTitle={search.addingProcedureTitle}
         buyer={search.selectedBuyer}
         contractSearch={search.contractSearch}
+        selectedContractNumbers={search.selectedContractNumbers}
         dateFrom={search.dateFrom}
         dateTo={search.dateTo}
         disabled={search.loading}
@@ -25,6 +26,9 @@ function App() {
         onDkCodeAdd={search.addDkCode}
         onDkCodeClear={search.clearDkCodes}
         onBuyerChange={search.handleBuyerChange}
+        onContractNumberAdd={search.addContractNumber}
+        onContractNumbersClear={search.clearContractNumbers}
+        onContractNumberRemove={search.removeContractNumber}
         onContractSearch={search.handleContractRemoteSearch}
         onContractSearchChange={search.setContractSearch}
         onDateFromChange={search.setDateFrom}

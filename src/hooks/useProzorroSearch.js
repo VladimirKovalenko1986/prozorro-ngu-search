@@ -51,6 +51,7 @@ export function useProzorroSearch() {
   const [searchFinishedMessage, setSearchFinishedMessage] = useState("");
   const [filters, setFilters] = useState({});
   const [contractSearch, setContractSearch] = useState("");
+  const [selectedContractNumbers, setSelectedContractNumbers] = useState([]);
   const [dkCode, setDkCode] = useState("");
   const [selectedDkCodes, setSelectedDkCodes] = useState([]);
   const [searchProgress, setSearchProgress] = useState(EMPTY_SEARCH_PROGRESS);
@@ -159,6 +160,50 @@ export function useProzorroSearch() {
 
   function clearFilters() {
     setFilters({});
+    setContractSearch("");
+  }
+
+  function normalizeContractNumber(value = "") {
+    return value.trim().replace(/\s+/g, " ");
+  }
+
+  function getActiveContractNumbers() {
+    const draft = normalizeContractNumber(contractSearch);
+    const normalizedDraft = normalizeText(draft);
+
+    if (
+      !normalizedDraft ||
+      selectedContractNumbers.some((item) => item.normalized === normalizedDraft)
+    ) {
+      return selectedContractNumbers;
+    }
+
+    return [...selectedContractNumbers, { value: draft, normalized: normalizedDraft }];
+  }
+
+  function addContractNumber(value) {
+    const contractNumber = normalizeContractNumber(value);
+    const normalized = normalizeText(contractNumber);
+
+    if (!normalized) return false;
+
+    setSelectedContractNumbers((current) =>
+      current.some((item) => item.normalized === normalized)
+        ? current
+        : [...current, { value: contractNumber, normalized }],
+    );
+    setContractSearch("");
+    return true;
+  }
+
+  function removeContractNumber(normalized) {
+    setSelectedContractNumbers((current) =>
+      current.filter((item) => item.normalized !== normalized),
+    );
+  }
+
+  function clearContractNumbers() {
+    setSelectedContractNumbers([]);
     setContractSearch("");
   }
 
@@ -449,15 +494,24 @@ export function useProzorroSearch() {
   }
 
   async function handleContractRemoteSearch() {
-    const query = normalizeText(contractSearch);
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
+    const searchRange = normalizeDateRange(dateFrom, dateTo);
 
     if (hasInvalidDkCode()) return;
 
-    if (!query) {
+    const activeContractNumbers = getActiveContractNumbers();
+
+    if (activeContractNumbers.length === 0) {
       setStatus("Введіть номер договору або його частину");
       return;
     }
+
+    if (activeContractNumbers.length > selectedContractNumbers.length) {
+      setSelectedContractNumbers(activeContractNumbers);
+      setContractSearch("");
+    }
+
+    const contractQueries = activeContractNumbers.map((item) => item.normalized);
 
     if (!buyer?.edrpous?.length) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
@@ -486,6 +540,9 @@ export function useProzorroSearch() {
           const json = await fetchTenderSearchPage({ edrpou, page, signal });
           const rows = json.data || [];
           const edrpouTotal = json.total || rows.length;
+          const pageProcedureDates = rows
+            .map((item) => getSearchItemProcedureDate(item))
+            .filter(Boolean);
 
           totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
           updateSearchProgress({
@@ -494,8 +551,19 @@ export function useProzorroSearch() {
             totalPages,
           });
           setStatus(
-            `Пошук договору "${contractSearch}". ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Сторінка ${page} з ${totalPages}. Знайдено: ${found.length}`,
+            `Пошук договорів (${contractQueries.length}). ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Сторінка ${page} з ${totalPages}. Знайдено: ${found.length}`,
           );
+
+          if (
+            pageProcedureDates.length === rows.length &&
+            pageProcedureDates.every((procedureDate) => procedureDate < searchRange.dateFrom)
+          ) {
+            updateSearchProgress((current) => ({
+              ...current,
+              pagesChecked: current.pagesChecked + 1,
+            }));
+            break;
+          }
 
           for (const [itemIndex, item] of rows.entries()) {
             if (foundTenderIds.has(item.tenderID)) {
@@ -507,17 +575,36 @@ export function useProzorroSearch() {
               proceduresChecked: current.proceduresChecked + 1,
             }));
 
+            const itemProcedureDate = getSearchItemProcedureDate(item);
+
+            if (
+              itemProcedureDate &&
+              !isDateInPeriod(itemProcedureDate, searchRange.dateFrom, searchRange.dateTo)
+            ) {
+              continue;
+            }
+
             setStatus(
-              `Пошук договору "${contractSearch}". Перевіряю процедуру ${itemIndex + 1} з ${rows.length}. Знайдено: ${found.length}`,
+              `Пошук договорів (${contractQueries.length}). Перевіряю процедуру ${itemIndex + 1} з ${rows.length}. Знайдено: ${found.length}`,
             );
 
             try {
+              const details = await fetchFullTenderDetails(item, signal);
+              const procedureDate = getProcedureDate(details, item);
+
+              if (!isDateInPeriod(procedureDate, searchRange.dateFrom, searchRange.dateTo)) {
+                await wait(TENDER_REQUEST_DELAY_MS, signal);
+                continue;
+              }
+
               const procedureResult = await buildProcedureForItem(
                 item,
                 (row) =>
-                  normalizeText(row.contractNumber).includes(query) &&
+                  contractQueries.some((query) =>
+                    normalizeText(row.contractNumber).includes(query),
+                  ) &&
                   getDkRowMatcher(row),
-                null,
+                details,
                 signal,
               );
 
@@ -551,15 +638,22 @@ export function useProzorroSearch() {
             pagesChecked: current.pagesChecked + 1,
           }));
 
+          if (
+            pageProcedureDates.length === rows.length &&
+            pageProcedureDates[pageProcedureDates.length - 1] < searchRange.dateFrom
+          ) {
+            break;
+          }
+
           page += 1;
         }
       }
 
       setStatus(
-        `Готово. За номером договору "${contractSearch}" знайдено: ${found.length} процедур.`,
+        `Готово. За номерами договорів (${contractQueries.length}) знайдено: ${found.length} процедур.`,
       );
       setSearchFinishedMessage(
-        `Пошук договору завершено. Знайдено: ${found.length} процедур.`,
+        `Пошук договорів завершено. Знайдено: ${found.length} процедур.`,
       );
       updateSearchProgress({ found: found.length, stage: "completed" });
     } catch (error) {
@@ -575,10 +669,12 @@ export function useProzorroSearch() {
 
   return {
     addingProcedureTitle,
+    addContractNumber,
     checkedLots,
     checkedProcedures,
     addDkCode,
     clearDkCodes,
+    clearContractNumbers,
     clearFilters,
     contractSearch,
     dateFrom,
@@ -597,9 +693,11 @@ export function useProzorroSearch() {
     recentlyAddedProcedureId,
     results,
     removeDkCode,
+    removeContractNumber,
     searchFinishedMessage,
     searchProgress,
     selectedBuyer,
+    selectedContractNumbers,
     selectedDkCodes,
     setContractSearch,
     setDateFrom,

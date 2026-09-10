@@ -10,12 +10,16 @@ export default function SearchPanel({
   addingProcedureTitle,
   buyer,
   contractSearch,
+  selectedContractNumbers,
   dateFrom,
   dateTo,
   disabled,
   dkCode,
   selectedDkCodes,
   onBuyerChange,
+  onContractNumberAdd,
+  onContractNumbersClear,
+  onContractNumberRemove,
   onContractSearch,
   onContractSearchChange,
   onDateFromChange,
@@ -138,14 +142,15 @@ export default function SearchPanel({
             </div>
           </div>
 
-          <SearchBox
+          <ContractMultiSelect
             disabled={disabled}
-            label="Номер договору"
-            onClear={() => onContractSearchChange("")}
+            onAdd={onContractNumberAdd}
+            onClear={onContractNumbersClear}
+            onRemove={onContractNumberRemove}
             onSearch={onContractSearch}
             onValueChange={onContractSearchChange}
             placeholder="Наприклад: 529 або ПС/УТЗ"
-            searchButtonLabel="Знайти договір"
+            selectedNumbers={selectedContractNumbers}
             value={contractSearch}
           />
         </section>
@@ -422,45 +427,94 @@ function DkMultiSelect({
   );
 }
 
-function SearchBox({
+function ContractMultiSelect({
   disabled,
-  label,
+  onAdd,
   onClear,
+  onRemove,
   onSearch,
   onValueChange,
   placeholder,
-  searchButtonLabel,
+  selectedNumbers,
   value,
 }) {
+  function handleKeyDown(event) {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+    onAdd(value);
+  }
+
   return (
-    <label className={`${css.controlLabel} ${css.remoteSearch}`}>
-      {label}
+    <div className={css.remoteSearch}>
+      <div className={css.dkHeading}>
+        <label className={css.controlLabel} htmlFor="contract-number-search">
+          Номери договорів
+        </label>
+        {selectedNumbers.length > 0 ? (
+          <span className={css.dkCount}>Обрано: {selectedNumbers.length}</span>
+        ) : null}
+      </div>
+
+      {selectedNumbers.length > 0 ? (
+        <div className={css.dkChips} aria-label="Вибрані номери договорів">
+          {selectedNumbers.map(({ normalized, value: contractNumber }) => (
+            <span className={css.dkChip} key={normalized}>
+              <span className={css.dkChipLabel}>{contractNumber}</span>
+              <button
+                aria-label={`Вилучити номер договору ${contractNumber}`}
+                disabled={disabled}
+                onClick={() => onRemove(normalized)}
+                type="button"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       <span className={css.remoteSearchControl}>
         <input
           className={css.remoteSearchInput}
           disabled={disabled}
+          id="contract-number-search"
           onChange={(event) => onValueChange(event.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           type="search"
           value={value}
         />
         <button
           className={css.secondaryButton}
-          disabled={disabled || !value.trim()}
+          disabled={disabled || (!value.trim() && selectedNumbers.length === 0)}
           onClick={onSearch}
           type="button"
         >
-          {searchButtonLabel}
+          Знайти договори
         </button>
         <button
           className={css.secondaryButton}
-          disabled={disabled || !value}
+          disabled={disabled || (!value && selectedNumbers.length === 0)}
           onClick={onClear}
           type="button"
         >
           Очистити
         </button>
       </span>
-    </label>
+
+      <div className={css.dkHint}>
+        <span>
+          {selectedNumbers.length
+            ? "Пошук виконується за кожним вибраним номером у вказаному періоді."
+            : "Введіть номер і натисніть Enter, щоб додати його до пошуку."}
+        </span>
+        {selectedNumbers.length > 0 ? (
+          <button disabled={disabled} onClick={onClear} type="button">
+            Очистити всі
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
