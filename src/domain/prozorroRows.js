@@ -86,15 +86,15 @@ export function getItemUnitName(item) {
 
 export function getItemUnitPrice(item) {
   return toNumber(
-    item?.unit?.value?.amount ||
-      item?.unit?.value?.value ||
-      item?.value?.amount ||
+    item?.unit?.value?.amount ??
+      item?.unit?.value?.value ??
+      item?.value?.amount ??
       null,
   );
 }
 
 export function getSpecificationAmount(quantity, unitPrice) {
-  if (!quantity || !unitPrice) return null;
+  if (quantity == null || unitPrice == null) return null;
 
   const amount = toNumber(quantity) * toNumber(unitPrice);
 
@@ -225,16 +225,16 @@ export function getLotTitle(lot, lotItems, contractDetails, contract) {
 
 export function getLotExpectedValue(details, lot) {
   return {
-    amount: lot?.value?.amount || details.value?.amount || null,
-    currency: lot?.value?.currency || details.value?.currency || "UAH",
+    amount: lot?.value?.amount ?? details.value?.amount ?? null,
+    currency: lot?.value?.currency ?? details.value?.currency ?? "UAH",
   };
 }
 
 export function getContractValue(contractDetails, contract) {
   return {
-    amount: contractDetails?.value?.amount || contract?.value?.amount || null,
+    amount: contractDetails?.value?.amount ?? contract?.value?.amount ?? null,
     currency:
-      contractDetails?.value?.currency || contract?.value?.currency || "UAH",
+      contractDetails?.value?.currency ?? contract?.value?.currency ?? "UAH",
   };
 }
 
