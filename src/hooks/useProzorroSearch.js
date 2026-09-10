@@ -41,9 +41,8 @@ export function useProzorroSearch() {
   const [filters, setFilters] = useState({});
   const [contractSearch, setContractSearch] = useState("");
   const [dkCode, setDkCode] = useState("");
+  const [selectedDkCodes, setSelectedDkCodes] = useState([]);
   const showBuyerColumn = selectedBuyer === "НГУ";
-  const selectedDkCode = normalizeDkCode(dkCode);
-  const selectedDkLabel = DK_LABELS[selectedDkCode] || "";
   const tableColumns = useMemo(
     () =>
       TABLE_COLUMNS.filter(
@@ -95,16 +94,53 @@ export function useProzorroSearch() {
     setContractSearch("");
   }
 
+  function getActiveDkCodes() {
+    const draftCode = normalizeDkCode(dkCode);
+
+    if (!DK_LABELS[draftCode] || selectedDkCodes.includes(draftCode)) {
+      return selectedDkCodes;
+    }
+
+    return [...selectedDkCodes, draftCode];
+  }
+
+  function addDkCode(value) {
+    const code = normalizeDkCode(value);
+
+    if (!DK_LABELS[code]) return false;
+
+    setSelectedDkCodes((current) =>
+      current.includes(code) ? current : [...current, code],
+    );
+    setDkCode("");
+    return true;
+  }
+
+  function removeDkCode(code) {
+    setSelectedDkCodes((current) => current.filter((item) => item !== code));
+  }
+
+  function clearDkCodes() {
+    setSelectedDkCodes([]);
+    setDkCode("");
+  }
+
   function getDkRowMatcher(row) {
-    if (!selectedDkCode) return true;
+    const activeDkCodes = getActiveDkCodes();
 
-    const prefix = getDkCodePrefix(selectedDkCode);
+    if (activeDkCodes.length === 0) return true;
 
-    return row.classificationIds?.some((code) => code.startsWith(prefix));
+    return activeDkCodes.some((selectedCode) => {
+      const prefix = getDkCodePrefix(selectedCode);
+
+      return row.classificationIds?.some((code) => code.startsWith(prefix));
+    });
   }
 
   function hasInvalidDkCode() {
-    if (!dkCode.trim() || selectedDkLabel) return false;
+    const draftCode = normalizeDkCode(dkCode);
+
+    if (!dkCode.trim() || DK_LABELS[draftCode]) return false;
 
     setStatus("Оберіть код ДК зі списку підказок");
     setSearchFinishedMessage("");
@@ -173,6 +209,13 @@ export function useProzorroSearch() {
     const searchRange = normalizeDateRange(dateFrom, dateTo);
 
     if (hasInvalidDkCode()) return;
+
+    const activeDkCodes = getActiveDkCodes();
+
+    if (activeDkCodes.length > selectedDkCodes.length) {
+      setSelectedDkCodes(activeDkCodes);
+      setDkCode("");
+    }
 
     if (!buyer?.edrpous?.length) {
       setStatus("Для цього замовника ще не додано ЄДРПОУ");
@@ -304,7 +347,7 @@ export function useProzorroSearch() {
       }
 
       setStatus(
-        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${selectedDkCode ? `. ДК: ${selectedDkCode} — ${selectedDkLabel}` : ""}`,
+        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${activeDkCodes.length ? `. ДК-кодів: ${activeDkCodes.length}` : ""}`,
       );
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
@@ -323,6 +366,13 @@ export function useProzorroSearch() {
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
 
     if (hasInvalidDkCode()) return;
+
+    const activeDkCodes = getActiveDkCodes();
+
+    if (activeDkCodes.length > selectedDkCodes.length) {
+      setSelectedDkCodes(activeDkCodes);
+      setDkCode("");
+    }
 
     if (!query) {
       setStatus("Введіть номер договору або його частину");
@@ -421,6 +471,8 @@ export function useProzorroSearch() {
     addingProcedureTitle,
     checkedLots,
     checkedProcedures,
+    addDkCode,
+    clearDkCodes,
     clearFilters,
     contractSearch,
     dateFrom,
@@ -437,8 +489,10 @@ export function useProzorroSearch() {
     loading,
     recentlyAddedProcedureId,
     results,
+    removeDkCode,
     searchFinishedMessage,
     selectedBuyer,
+    selectedDkCodes,
     setContractSearch,
     setDateFrom,
     setDateTo,

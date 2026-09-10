@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { BUYERS } from "../../constants/buyers.js";
-import { getDkSuggestions } from "../../constants/dk.js";
+import { DK_LABELS, getDkSuggestions, normalizeDkCode } from "../../constants/dk.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.jsx";
@@ -14,12 +14,16 @@ export default function SearchPanel({
   dateTo,
   disabled,
   dkCode,
+  selectedDkCodes,
   onBuyerChange,
   onContractSearch,
   onContractSearchChange,
   onDateFromChange,
   onDateToChange,
+  onDkCodeAdd,
   onDkCodeChange,
+  onDkCodeClear,
+  onDkCodeRemove,
   onSearch,
   onStorageImport,
   onThemeToggle,
@@ -30,8 +34,6 @@ export default function SearchPanel({
   tableResults,
   theme,
 }) {
-  const dkSuggestions = useMemo(() => getDkSuggestions(dkCode), [dkCode]);
-
   return (
     <section className={css.panel} id="search-panel">
       <div className={css.header}>
@@ -97,25 +99,15 @@ export default function SearchPanel({
             </button>
           </div>
 
-          <label className={`${css.controlLabel} ${css.dkSearch}`}>
-            Пошук по ДК
-            <input
-              className={css.control}
-              disabled={disabled}
-              list="dk-021-options"
-              onChange={(event) => onDkCodeChange(event.target.value)}
-              placeholder="Введіть 3–4 цифри або частину назви"
-              type="search"
-              value={dkCode}
-            />
-            <datalist id="dk-021-options">
-              {dkSuggestions.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.label}
-                </option>
-              ))}
-            </datalist>
-          </label>
+          <DkMultiSelect
+            disabled={disabled}
+            onAdd={onDkCodeAdd}
+            onChange={onDkCodeChange}
+            onClear={onDkCodeClear}
+            onRemove={onDkCodeRemove}
+            selectedCodes={selectedDkCodes}
+            value={dkCode}
+          />
 
           <div className={css.utilityRow}>
             <ExportExcelButton
@@ -179,6 +171,157 @@ export default function SearchPanel({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function DkMultiSelect({
+  disabled,
+  onAdd,
+  onChange,
+  onClear,
+  onRemove,
+  selectedCodes,
+  value,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const suggestions = useMemo(
+    () =>
+      getDkSuggestions(value, 8).filter(
+        (option) => !selectedCodes.includes(option.code),
+      ),
+    [selectedCodes, value],
+  );
+  const hasQuery = value.trim().length > 0;
+  const showSuggestions = isOpen && hasQuery && suggestions.length > 0;
+
+  function selectCode(code) {
+    if (onAdd(code)) {
+      setIsOpen(false);
+      setActiveIndex(0);
+    }
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === "ArrowDown" && suggestions.length) {
+      event.preventDefault();
+      setIsOpen(true);
+      setActiveIndex((current) => (current + 1) % suggestions.length);
+      return;
+    }
+
+    if (event.key === "ArrowUp" && suggestions.length) {
+      event.preventDefault();
+      setIsOpen(true);
+      setActiveIndex((current) =>
+        current === 0 ? suggestions.length - 1 : current - 1,
+      );
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+
+      if (showSuggestions) {
+        selectCode(suggestions[activeIndex]?.code);
+        return;
+      }
+
+      const exactCode = normalizeDkCode(value);
+
+      if (DK_LABELS[exactCode]) selectCode(exactCode);
+      return;
+    }
+
+    if (event.key === "Escape") setIsOpen(false);
+  }
+
+  return (
+    <div className={css.dkSearch}>
+      <div className={css.dkHeading}>
+        <label className={css.controlLabel} htmlFor="dk-code-search">
+          Пошук по ДК
+        </label>
+        {selectedCodes.length > 0 ? (
+          <span className={css.dkCount}>Обрано: {selectedCodes.length}</span>
+        ) : null}
+      </div>
+
+      {selectedCodes.length > 0 ? (
+        <div className={css.dkChips} aria-label="Вибрані коди ДК">
+          {selectedCodes.map((code) => (
+            <span className={css.dkChip} key={code}>
+              <span className={css.dkChipCode}>{code}</span>
+              <span className={css.dkChipLabel}>{DK_LABELS[code]}</span>
+              <button
+                aria-label={`Вилучити ${code} — ${DK_LABELS[code]}`}
+                disabled={disabled}
+                onClick={() => onRemove(code)}
+                type="button"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className={css.dkInputWrap}>
+        <input
+          aria-autocomplete="list"
+          aria-controls="dk-code-suggestions"
+          aria-expanded={showSuggestions}
+          className={css.control}
+          disabled={disabled}
+          id="dk-code-search"
+          onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setActiveIndex(0);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder="Введіть 3–4 цифри або частину назви"
+          role="combobox"
+          type="search"
+          value={value}
+        />
+
+        {showSuggestions ? (
+          <div className={css.dkSuggestions} id="dk-code-suggestions" role="listbox">
+            {suggestions.map((option, index) => (
+              <button
+                aria-selected={index === activeIndex}
+                className={`${css.dkSuggestion} ${index === activeIndex ? css.dkSuggestionActive : ""}`}
+                key={option.code}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => selectCode(option.code)}
+                role="option"
+                type="button"
+              >
+                <span>{option.code}</span>
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className={css.dkHint}>
+        <span>
+          {selectedCodes.length
+            ? "Буде знайдено закупівлі, що відповідають хоча б одному вибраному коду."
+            : "Якщо нічого не вибрати, пошук виконується за всіма кодами ДК."}
+        </span>
+        {selectedCodes.length > 0 ? (
+          <button disabled={disabled} onClick={onClear} type="button">
+            Очистити всі
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

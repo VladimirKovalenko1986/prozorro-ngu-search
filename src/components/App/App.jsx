@@ -21,12 +21,16 @@ function App() {
         dateTo={search.dateTo}
         disabled={search.loading}
         dkCode={search.dkCode}
+        selectedDkCodes={search.selectedDkCodes}
+        onDkCodeAdd={search.addDkCode}
+        onDkCodeClear={search.clearDkCodes}
         onBuyerChange={search.handleBuyerChange}
         onContractSearch={search.handleContractRemoteSearch}
         onContractSearchChange={search.setContractSearch}
         onDateFromChange={search.setDateFrom}
         onDateToChange={search.setDateTo}
         onDkCodeChange={search.setDkCode}
+        onDkCodeRemove={search.removeDkCode}
         onSearch={search.handleSearch}
         onStorageImport={search.handleStorageImport}
         onThemeToggle={toggleTheme}
