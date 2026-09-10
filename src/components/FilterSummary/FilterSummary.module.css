@@ -4,16 +4,16 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 12px;
-  color: #53616f;
+  color: var(--muted-text);
   font-weight: 700;
 }
 
 .clearButton {
   height: 38px;
-  border: 1px solid #b8c4cf;
+  border: 1px solid var(--control-border);
   border-radius: 6px;
-  background: white;
-  color: #17202a;
+  background: var(--panel-background);
+  color: var(--text-color);
   padding: 0 14px;
   cursor: pointer;
   font-size: 14px;
@@ -21,11 +21,11 @@
 }
 
 .clearButton:disabled {
-  background: #eef2f6;
-  color: #8b98a5;
+  background: var(--disabled-background);
+  color: var(--disabled-text);
   cursor: not-allowed;
 }
 
 .clearButton:hover:not(:disabled) {
-  background: #f8fafc;
+  background: var(--hover-background);
 }

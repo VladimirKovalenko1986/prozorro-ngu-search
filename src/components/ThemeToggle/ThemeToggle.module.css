@@ -1,0 +1,29 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  background: var(--soft-background);
+  color: var(--text-color);
+  padding: 0 16px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.button:hover {
+  border-color: var(--accent-color);
+  background: var(--hover-background);
+}
+
+.icon {
+  font-size: 22px;
+  line-height: 1;
+}

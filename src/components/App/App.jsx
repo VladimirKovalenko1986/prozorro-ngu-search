@@ -4,10 +4,12 @@ import ResultsTable from "../ResultsTable/ResultsTable.jsx";
 import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import SearchPanel from "../SearchPanel/SearchPanel.jsx";
 import { useProzorroSearch } from "../../hooks/useProzorroSearch.js";
+import { useTheme } from "../../hooks/useTheme.js";
 import css from "./App.module.css";
 
 function App() {
   const search = useProzorroSearch();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <main className={css.page}>
@@ -27,11 +29,13 @@ function App() {
         onDkCodeChange={search.setDkCode}
         onSearch={search.handleSearch}
         onStorageImport={search.handleStorageImport}
+        onThemeToggle={toggleTheme}
         searchFinishedMessage={search.searchFinishedMessage}
         showBuyerColumn={search.showBuyerColumn}
         status={search.status}
         storageKeys={STORAGE_KEYS}
         tableResults={search.filteredResults}
+        theme={theme}
       />
 
       <FilterSummary

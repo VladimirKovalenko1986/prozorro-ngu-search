@@ -3,6 +3,7 @@ import { BUYERS } from "../../constants/buyers.js";
 import { getDkSuggestions } from "../../constants/dk.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
+import ThemeToggle from "../ThemeToggle/ThemeToggle.jsx";
 import css from "./SearchPanel.module.css";
 
 export default function SearchPanel({
@@ -21,17 +22,22 @@ export default function SearchPanel({
   onDkCodeChange,
   onSearch,
   onStorageImport,
+  onThemeToggle,
   searchFinishedMessage,
   showBuyerColumn,
   status,
   storageKeys,
   tableResults,
+  theme,
 }) {
   const dkSuggestions = useMemo(() => getDkSuggestions(dkCode), [dkCode]);
 
   return (
     <section className={css.panel} id="search-panel">
-      <h1 className={css.title}>Пошук договорів Prozorro</h1>
+      <div className={css.header}>
+        <h1 className={css.title}>Пошук договорів Prozorro</h1>
+        <ThemeToggle onToggle={onThemeToggle} theme={theme} />
+      </div>
 
       <form className={css.controls} onSubmit={onSearch}>
         <label className={css.controlLabel}>

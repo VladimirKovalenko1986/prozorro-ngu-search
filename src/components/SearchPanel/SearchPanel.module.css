@@ -1,13 +1,21 @@
 .panel {
-  background: white;
-  border: 1px solid #dce3ea;
+  background: var(--panel-background);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
 .title {
-  margin: 0 0 20px;
+  margin: 0;
   font-size: 28px;
 }
 
@@ -29,20 +37,20 @@
 .remoteSearchInput {
   width: 260px;
   height: 56px;
-  border: 1px solid #b8c4cf;
+  border: 1px solid var(--control-border);
   border-radius: 6px;
   padding: 0 16px;
   font-size: 22px;
   font-weight: 700;
-  background-color: white;
-  color: #17202a;
+  background-color: var(--panel-background);
+  color: var(--text-color);
 }
 
 select.control {
   appearance: none;
   background-image:
-    linear-gradient(45deg, transparent 50%, #17202a 50%),
-    linear-gradient(135deg, #17202a 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, var(--text-color) 50%),
+    linear-gradient(135deg, var(--text-color) 50%, transparent 50%);
   background-position:
     calc(100% - 22px) 24px,
     calc(100% - 14px) 24px;
@@ -105,7 +113,7 @@ select.control {
 
 .status {
   margin: 18px 0 0;
-  color: #53616f;
+  color: var(--muted-text);
 }
 
 .searchActivity {
@@ -113,15 +121,15 @@ select.control {
   align-items: center;
   gap: 10px;
   margin-top: 14px;
-  color: #0b6bcb;
+  color: var(--accent-color);
   font-weight: 700;
 }
 
 .searchSpinner {
   width: 24px;
   height: 24px;
-  border: 4px solid #cfe3ff;
-  border-top-color: #0b6bcb;
+  border: 4px solid var(--accent-soft);
+  border-top-color: var(--accent-color);
   border-radius: 50%;
   animation: search-spin 700ms linear infinite;
 }
@@ -129,10 +137,10 @@ select.control {
 .searchFinished {
   width: fit-content;
   margin-top: 14px;
-  border: 1px solid #bde7c9;
+  border: 1px solid var(--fact-border);
   border-radius: 6px;
-  background: #ecfdf3;
-  color: #17633a;
+  background: var(--success-background);
+  color: var(--success-text);
   padding: 10px 14px;
   font-weight: 700;
   animation: finished-pop 260ms ease-out;
