@@ -38,10 +38,14 @@ function buildSheetXml(columns, rows) {
   ];
   const rowXml = allRows
     .map(
-      (row, rowIndex) =>
-        `<row r="${rowIndex + 1}">${row
+      (row, rowIndex) => {
+        const rowAttributes =
+          rowIndex === 0 ? ` r="1" ht="32" customHeight="1"` : ` r="${rowIndex + 1}"`;
+
+        return `<row${rowAttributes}>${row
           .map((cell, columnIndex) => buildCell(cell, columnIndex, rowIndex))
-          .join("")}</row>`,
+          .join("")}</row>`;
+      },
     )
     .join("");
   const columnsXml = columns
@@ -103,8 +107,9 @@ const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <font><sz val="11"/><name val="Aptos"/></font>
     <font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Aptos"/></font>
   </fonts>
-  <fills count="2">
+  <fills count="3">
     <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
     <fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill>
   </fills>
   <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
@@ -113,7 +118,7 @@ const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
     <xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
-    <xf numFmtId="0" fontId="1" fillId="1" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
   </cellXfs>
 </styleSheet>`;
 
