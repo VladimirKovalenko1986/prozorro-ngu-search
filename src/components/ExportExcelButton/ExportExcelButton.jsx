@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { formatDate } from "../../utils/formatDate.js";
+import { createXlsxFile } from "../../utils/xlsx.js";
 import css from "./ExportExcelButton.module.css";
 
 function getColumns(showBuyerColumn) {
@@ -21,14 +23,6 @@ function getColumns(showBuyerColumn) {
     "Статус договору",
     "Статус Award",
   ];
-}
-
-function escapeCell(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
 
 function textCell(value) {
@@ -141,45 +135,8 @@ function buildExcelRows(results, showBuyerColumn) {
   );
 }
 
-function buildExcelHtml(results, showBuyerColumn) {
-  const header = getColumns(showBuyerColumn)
-    .map((column) => `<th>${escapeCell(column)}</th>`)
-    .join("");
-  const rows = buildExcelRows(results, showBuyerColumn)
-    .map(
-      (row) =>
-        `<tr>${row
-          .map((cell) => {
-            if (cell.type === "number") {
-              return `<td style="mso-number-format:'${cell.format}';">${cell.value}</td>`;
-            }
-
-            return `<td>${escapeCell(cell.value)}</td>`;
-          })
-          .join("")}</tr>`,
-    )
-    .join("");
-
-  return `
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-      </head>
-      <body>
-        <table border="1">
-          <thead>
-            <tr>${header}</tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </body>
-    </html>
-  `;
-}
-
 function buildFileName({ buyer, dateFrom, dateTo }) {
-  return `prozorro-${buyer}-${dateFrom}-${dateTo}.xls`
+  return `prozorro-${buyer}-${dateFrom}-${dateTo}.xlsx`
     .replaceAll(" ", "-")
     .toLowerCase();
 }
@@ -192,33 +149,47 @@ export default function ExportExcelButton({
   results,
   showBuyerColumn,
 }) {
-  function handleExport() {
-    const excelHtml = buildExcelHtml(results, showBuyerColumn);
-    const blob = new Blob(["\ufeff", excelHtml], {
-      type: "application/vnd.ms-excel;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+  const [isExporting, setIsExporting] = useState(false);
 
-    link.href = url;
-    link.download = buildFileName({ buyer, dateFrom, dateTo });
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  async function handleExport() {
+    setIsExporting(true);
+
+    try {
+      const file = await createXlsxFile({
+        columns: getColumns(showBuyerColumn),
+        rows: buildExcelRows(results, showBuyerColumn),
+      });
+      const blob = new Blob([file], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = buildFileName({ buyer, dateFrom, dateTo });
+      document.body.append(link);
+      link.click();
+      link.remove();
+
+      // Safari can produce an empty download if this temporary URL is revoked
+      // immediately after the click.
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   return (
     <button
       className={css.button}
-      disabled={disabled || results.length === 0}
+      disabled={disabled || isExporting || results.length === 0}
       onClick={handleExport}
       type="button"
     >
       <span className={css.icon} aria-hidden="true">
         X
       </span>
-      Export Excel
+      {isExporting ? "Готую файл..." : "Export Excel"}
     </button>
   );
 }
