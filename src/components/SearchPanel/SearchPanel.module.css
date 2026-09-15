@@ -396,6 +396,24 @@ select.control {
   animation: suggestions-enter 160ms ease-out;
 }
 
+.dkDuplicateNotice {
+  position: absolute;
+  z-index: 21;
+  top: calc(100% + 7px);
+  left: 0;
+  max-width: min(100%, 440px);
+  border: 1px solid var(--accent-border);
+  border-radius: 12px;
+  background: var(--card-background);
+  box-shadow: 0 16px 36px rgba(17, 34, 64, 0.2);
+  color: var(--text-color);
+  padding: 10px 13px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
+  animation: suggestions-enter 160ms ease-out;
+}
+
 .dkSuggestion {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);

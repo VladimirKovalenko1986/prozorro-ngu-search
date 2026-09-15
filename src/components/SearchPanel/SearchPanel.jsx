@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUYERS } from "../../constants/buyers.js";
 import { loadDkCatalog } from "../../constants/dkCatalog.js";
+import { normalizeDkCode } from "../../constants/dk.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.jsx";
@@ -260,6 +261,13 @@ function DkMultiSelect({
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [duplicateMessage, setDuplicateMessage] = useState("");
+  const duplicateTimerRef = useRef(null);
+
+  useEffect(
+    () => () => window.clearTimeout(duplicateTimerRef.current),
+    [],
+  );
   const ensureCatalog = useCallback(async () => {
     if (catalog || catalogLoading) return catalog;
 
@@ -288,7 +296,27 @@ function DkMultiSelect({
   const hasQuery = value.trim().length > 0;
   const showSuggestions = isOpen && hasQuery && suggestions.length > 0;
 
+  function showDuplicateMessage(code) {
+    window.clearTimeout(duplicateTimerRef.current);
+    setDuplicateMessage(`Код ДК ${code} уже додано. Введіть інший код.`);
+    duplicateTimerRef.current = window.setTimeout(
+      () => setDuplicateMessage(""),
+      3500,
+    );
+  }
+
+  function isSelectedCode(code) {
+    return selectedCodes.some((item) => item.code === code);
+  }
+
   function selectCode(option) {
+    const code = normalizeDkCode(option?.code);
+
+    if (code && isSelectedCode(code)) {
+      showDuplicateMessage(code);
+      return;
+    }
+
     if (option && onAdd(option)) {
       setIsOpen(false);
       setActiveIndex(0);
@@ -314,6 +342,13 @@ function DkMultiSelect({
 
     if (event.key === "Enter") {
       event.preventDefault();
+
+      const code = normalizeDkCode(value);
+
+      if (code && isSelectedCode(code)) {
+        showDuplicateMessage(code);
+        return;
+      }
 
       if (showSuggestions) {
         selectCode(suggestions[activeIndex]);
@@ -398,6 +433,12 @@ function DkMultiSelect({
                 <span>{option.label}</span>
               </button>
             ))}
+          </div>
+        ) : null}
+
+        {duplicateMessage ? (
+          <div className={css.dkDuplicateNotice} role="status">
+            {duplicateMessage}
           </div>
         ) : null}
       </div>
