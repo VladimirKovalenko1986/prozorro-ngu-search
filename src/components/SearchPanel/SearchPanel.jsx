@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUYERS } from "../../constants/buyers.js";
 import { loadDkCatalog } from "../../constants/dkCatalog.js";
 import { normalizeDkCode } from "../../constants/dk.js";
+import { normalizeText } from "../../utils/text.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.jsx";
@@ -479,11 +480,45 @@ function ContractMultiSelect({
   selectedNumbers,
   value,
 }) {
+  const [duplicateMessage, setDuplicateMessage] = useState("");
+  const duplicateTimerRef = useRef(null);
+
+  useEffect(
+    () => () => window.clearTimeout(duplicateTimerRef.current),
+    [],
+  );
+
+  function showDuplicateMessage(contractNumber) {
+    window.clearTimeout(duplicateTimerRef.current);
+    setDuplicateMessage(
+      `Договір «${contractNumber}» уже додано. Введіть інший номер.`,
+    );
+    duplicateTimerRef.current = window.setTimeout(
+      () => setDuplicateMessage(""),
+      3500,
+    );
+  }
+
+  function addContractNumber() {
+    const contractNumber = value.trim().replace(/\s+/g, " ");
+    const normalized = normalizeText(contractNumber);
+
+    if (
+      normalized &&
+      selectedNumbers.some((item) => item.normalized === normalized)
+    ) {
+      showDuplicateMessage(contractNumber);
+      return;
+    }
+
+    onAdd(value);
+  }
+
   function handleKeyDown(event) {
     if (event.key !== "Enter") return;
 
     event.preventDefault();
-    onAdd(value);
+    addContractNumber();
   }
 
   return (
@@ -543,6 +578,12 @@ function ContractMultiSelect({
           Очистити
         </button>
       </span>
+
+      {duplicateMessage ? (
+        <div className={css.contractDuplicateNotice} role="status">
+          {duplicateMessage}
+        </div>
+      ) : null}
 
       <div className={css.dkHint}>
         <span>
