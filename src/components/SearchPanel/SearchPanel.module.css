@@ -23,56 +23,6 @@
   content: "";
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 30px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.brandMark {
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 17px;
-  background: linear-gradient(135deg, #1683ef, #6e5df6);
-  box-shadow: 0 12px 28px rgba(48, 112, 230, 0.28);
-  color: white;
-  font-size: 25px;
-  font-weight: 900;
-  transform: rotate(-4deg);
-  transition: transform 220ms ease;
-}
-
-.brand:hover .brandMark {
-  transform: rotate(0deg) scale(1.05);
-}
-
-.eyebrow {
-  display: block;
-  margin-bottom: 2px;
-  color: var(--accent-color);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.title {
-  margin: 0;
-  font-size: clamp(26px, 2.3vw, 38px);
-  line-height: 1.12;
-  letter-spacing: -0.035em;
-}
-
 .controls {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(360px, 0.85fr);
@@ -792,10 +742,6 @@ select.control {
     border-radius: 18px;
   }
 
-  .header {
-    align-items: flex-start;
-  }
-
   .primaryControls {
     grid-template-columns: 1fr 1fr;
   }
@@ -812,25 +758,6 @@ select.control {
 @media (max-width: 560px) {
   .panel {
     padding: 18px;
-  }
-
-  .header {
-    flex-direction: column;
-  }
-
-  .header,
-  .brand {
-    align-items: flex-start;
-  }
-
-  .brandMark {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-  }
-
-  .eyebrow {
-    font-size: 10px;
   }
 
   .primaryControls,

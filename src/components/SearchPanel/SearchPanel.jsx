@@ -5,7 +5,6 @@ import { normalizeDkCode } from "../../constants/dk.js";
 import { normalizeText } from "../../utils/text.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
-import ThemeToggle from "../ThemeToggle/ThemeToggle.jsx";
 import css from "./SearchPanel.module.css";
 
 export default function SearchPanel({
@@ -33,28 +32,15 @@ export default function SearchPanel({
   onSearch,
   onStopSearch,
   onStorageImport,
-  onThemeToggle,
   searchFinishedMessage,
   searchProgress,
   showBuyerColumn,
   status,
   storageKeys,
   tableResults,
-  theme,
 }) {
   return (
     <section className={css.panel} id="search-panel">
-      <div className={css.header}>
-        <div className={css.brand}>
-          <span className={css.brandMark} aria-hidden="true">P</span>
-          <div>
-            <span className={css.eyebrow}>Prozorro · договори</span>
-            <h1 className={css.title}>Пошук закупівель</h1>
-          </div>
-        </div>
-        <ThemeToggle onToggle={onThemeToggle} theme={theme} />
-      </div>
-
       <form className={css.controls} onSubmit={onSearch}>
         <section className={`${css.searchCard} ${css.mainSearchCard}`}>
           <div className={css.sectionHeading}>
