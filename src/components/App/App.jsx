@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BUYERS } from "../../constants/buyers.js";
 import { STORAGE_KEYS } from "../../constants/storage.js";
 import FilterSummary from "../FilterSummary/FilterSummary.jsx";
 import ResultsTable from "../ResultsTable/ResultsTable.jsx";
@@ -9,10 +10,14 @@ import { useProzorroSearch } from "../../hooks/useProzorroSearch.js";
 import { useTheme } from "../../hooks/useTheme.js";
 import css from "./App.module.css";
 
+const EDRPOU_SEARCH_OPTION = "edrpou-search";
+
 function App() {
   const search = useProzorroSearch();
   const { theme, toggleTheme } = useTheme();
   const [activePage, setActivePage] = useState("search");
+  const [analysisBuyer, setAnalysisBuyer] = useState(BUYERS[0].label);
+  const [analysisEdrpou, setAnalysisEdrpou] = useState("");
 
   return (
     <main className={css.page}>
@@ -47,7 +52,16 @@ function App() {
         <ThemeToggle onToggle={toggleTheme} theme={theme} />
       </header>
 
-      {activePage === "search" ? <SearchPage search={search} /> : <PriceAnalysisPage />}
+      {activePage === "search" ? (
+        <SearchPage search={search} />
+      ) : (
+        <PriceAnalysisPage
+          buyer={analysisBuyer}
+          edrpou={analysisEdrpou}
+          onBuyerChange={setAnalysisBuyer}
+          onEdrpouChange={setAnalysisEdrpou}
+        />
+      )}
     </main>
   );
 }
@@ -137,14 +151,59 @@ function SearchPage({ search }) {
   );
 }
 
-function PriceAnalysisPage() {
+function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
+  const selectedBuyer = BUYERS.find((item) => item.label === buyer);
+  const isEdrpouSearch = buyer === EDRPOU_SEARCH_OPTION;
+  const hasCompleteEdrpou = edrpou.length === 8;
+
   return (
     <section className={css.priceAnalysis}>
-      <span className={css.priceAnalysisBadge}>Нова сторінка</span>
+      <span className={css.priceAnalysisBadge}>Підготовка пошуку</span>
       <h2>Аналіз цін</h2>
       <p>
-        Тут з’явиться порівняння цін за договорами, кодами ДК і періодами.
+        Оберіть замовника для майбутнього порівняння цін.
       </p>
+
+      <form className={css.priceSearchForm} onSubmit={(event) => event.preventDefault()}>
+        <label className={css.priceControl}>
+          Замовник
+          <select value={buyer} onChange={(event) => onBuyerChange(event.target.value)}>
+            {BUYERS.map((item) => (
+              <option key={item.label} value={item.label}>
+                {item.label}
+              </option>
+            ))}
+            <option value={EDRPOU_SEARCH_OPTION}>Пошук по ЄДРПОУ</option>
+          </select>
+        </label>
+
+        {isEdrpouSearch ? (
+          <div className={css.priceEdrpouForm}>
+            <label className={css.priceControl}>
+              Код ЄДРПОУ
+              <input
+                inputMode="numeric"
+                maxLength="8"
+                onChange={(event) =>
+                  onEdrpouChange(event.target.value.replace(/\D/g, "").slice(0, 8))
+                }
+                placeholder="Наприклад: 08803498"
+                type="text"
+                value={edrpou}
+              />
+            </label>
+            <p className={css.priceSearchHint}>
+              {hasCompleteEdrpou
+                ? `Буде використано конкретний ЄДРПОУ: ${edrpou}.`
+                : "Введіть восьмизначний код ЄДРПОУ для пошуку конкретного підрозділу."}
+            </p>
+          </div>
+        ) : (
+          <p className={css.priceSearchHint}>
+            Для «{selectedBuyer?.label}» доступно {selectedBuyer?.edrpous.length || 0} кодів ЄДРПОУ.
+          </p>
+        )}
+      </form>
     </section>
   );
 }
