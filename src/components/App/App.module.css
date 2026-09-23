@@ -152,13 +152,17 @@
   }
 
   .priceAnalysis {
-    min-height: 380px;
     border-radius: 18px;
+  }
+
+  .priceAnalysisHeader {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .priceSearchForm {
     grid-template-columns: 1fr;
-    margin-top: 24px;
+    width: 100%;
   }
 
   .priceSearchHint {
@@ -177,18 +181,21 @@
 }
 
 .priceAnalysis {
-  min-height: min(480px, 55vh);
-  display: grid;
-  align-content: center;
-  justify-items: start;
   border: 1px solid var(--border-color);
   border-radius: 24px;
   background:
     radial-gradient(circle at 85% 12%, var(--panel-glow), transparent 28%),
     var(--panel-background);
   box-shadow: var(--panel-shadow);
-  padding: clamp(32px, 7vw, 84px);
+  padding: clamp(22px, 3vw, 36px);
   animation: empty-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.priceAnalysisHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 32px;
 }
 
 .priceAnalysisBadge {
@@ -202,29 +209,29 @@
 }
 
 .priceAnalysis h2 {
-  margin-top: 18px;
-  font-size: clamp(30px, 4vw, 54px);
-  letter-spacing: -0.045em;
+  margin-top: 10px;
+  font-size: clamp(23px, 2.4vw, 32px);
+  letter-spacing: -0.035em;
 }
 
 .priceAnalysis p {
-  max-width: 560px;
-  margin-top: 10px;
+  max-width: 480px;
+  margin-top: 5px;
   color: var(--muted-text);
-  font-size: clamp(16px, 1.6vw, 20px);
+  font-size: 14px;
 }
 
 .priceSearchForm {
-  width: min(760px, 100%);
+  width: min(660px, 100%);
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  margin-top: 32px;
+  grid-template-columns: minmax(230px, 320px) minmax(0, 1fr);
+  align-items: end;
+  gap: 14px;
 }
 
 .priceControl {
   display: grid;
-  width: min(360px, 100%);
+  width: 100%;
   gap: 8px;
   color: var(--muted-text);
   font-size: 14px;
@@ -234,7 +241,7 @@
 .priceControl select,
 .priceControl input {
   width: 100%;
-  height: 54px;
+  height: 48px;
   border: 1px solid var(--control-border);
   border-radius: 13px;
   outline: none;
@@ -259,24 +266,14 @@
 }
 
 .priceSearchHint {
-  max-width: none;
   margin: 0;
-  border: 1px solid var(--accent-border);
-  border-radius: 13px;
-  background: var(--accent-soft);
-  color: var(--text-color);
-  padding: 12px 14px;
-  font-size: 14px;
+  font-size: 12px !important;
   line-height: 1.45;
 }
 
 .priceEdrpouForm {
   display: grid;
-  gap: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  background: var(--soft-background);
-  padding: 18px;
+  gap: 5px;
   animation: empty-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

@@ -152,58 +152,55 @@ function SearchPage({ search }) {
 }
 
 function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
-  const selectedBuyer = BUYERS.find((item) => item.label === buyer);
   const isEdrpouSearch = buyer === EDRPOU_SEARCH_OPTION;
   const hasCompleteEdrpou = edrpou.length === 8;
 
   return (
     <section className={css.priceAnalysis}>
-      <span className={css.priceAnalysisBadge}>Підготовка пошуку</span>
-      <h2>Аналіз цін</h2>
-      <p>
-        Оберіть замовника для майбутнього порівняння цін.
-      </p>
+      <div className={css.priceAnalysisHeader}>
+        <div>
+          <span className={css.priceAnalysisBadge}>Аналіз цін</span>
+          <h2>Пошук закупівель</h2>
+          <p>Оберіть замовника для майбутнього порівняння цін.</p>
+        </div>
 
-      <form className={css.priceSearchForm} onSubmit={(event) => event.preventDefault()}>
-        <label className={css.priceControl}>
-          Замовник
-          <select value={buyer} onChange={(event) => onBuyerChange(event.target.value)}>
-            {BUYERS.map((item) => (
-              <option key={item.label} value={item.label}>
-                {item.label}
-              </option>
-            ))}
-            <option value={EDRPOU_SEARCH_OPTION}>Пошук по ЄДРПОУ</option>
-          </select>
-        </label>
+        <form className={css.priceSearchForm} onSubmit={(event) => event.preventDefault()}>
+          <label className={css.priceControl}>
+            Замовник
+            <select value={buyer} onChange={(event) => onBuyerChange(event.target.value)}>
+              {BUYERS.map((item) => (
+                <option key={item.label} value={item.label}>
+                  {item.label}
+                </option>
+              ))}
+              <option value={EDRPOU_SEARCH_OPTION}>Пошук по ЄДРПОУ</option>
+            </select>
+          </label>
 
-        {isEdrpouSearch ? (
-          <div className={css.priceEdrpouForm}>
-            <label className={css.priceControl}>
-              Код ЄДРПОУ
-              <input
-                inputMode="numeric"
-                maxLength="8"
-                onChange={(event) =>
-                  onEdrpouChange(event.target.value.replace(/\D/g, "").slice(0, 8))
-                }
-                placeholder="Наприклад: 08803498"
-                type="text"
-                value={edrpou}
-              />
-            </label>
-            <p className={css.priceSearchHint}>
-              {hasCompleteEdrpou
-                ? `Буде використано конкретний ЄДРПОУ: ${edrpou}.`
-                : "Введіть восьмизначний код ЄДРПОУ для пошуку конкретного підрозділу."}
-            </p>
-          </div>
-        ) : (
-          <p className={css.priceSearchHint}>
-            Для «{selectedBuyer?.label}» доступно {selectedBuyer?.edrpous.length || 0} кодів ЄДРПОУ.
-          </p>
-        )}
-      </form>
+          {isEdrpouSearch ? (
+            <div className={css.priceEdrpouForm}>
+              <label className={css.priceControl}>
+                Код ЄДРПОУ
+                <input
+                  inputMode="numeric"
+                  maxLength="8"
+                  onChange={(event) =>
+                    onEdrpouChange(event.target.value.replace(/\D/g, "").slice(0, 8))
+                  }
+                  placeholder="Наприклад: 08803498"
+                  type="text"
+                  value={edrpou}
+                />
+              </label>
+              <p className={css.priceSearchHint}>
+                {hasCompleteEdrpou
+                  ? `Буде використано ЄДРПОУ: ${edrpou}.`
+                  : "Введіть восьмизначний код ЄДРПОУ."}
+              </p>
+            </div>
+          ) : null}
+        </form>
+      </div>
     </section>
   );
 }
