@@ -58,19 +58,9 @@ function getLotAndSpecificationLabel(row) {
   return parts.join(" | ");
 }
 
-function getCalculatedContractTotal(rows) {
-  const total = rows.reduce(
-    (sum, row) => sum + (row.specificationTitle ? row.contractAmount || 0 : 0),
-    0,
-  );
-
-  return total || null;
-}
-
 function buildExcelRows(results, showBuyerColumn) {
   return results.flatMap((procedure) =>
-    [
-      ...procedure.rows.map((row) => [
+    procedure.rows.map((row) => [
         textCell(procedure.title),
         textCell(procedure.procedureType),
         ...(showBuyerColumn ? [textCell(procedure.buyerUnit)] : []),
@@ -89,49 +79,6 @@ function buildExcelRows(results, showBuyerColumn) {
         textCell(row.contractStatus),
         textCell(row.awardStatus),
       ]),
-      ...(procedure.rows.some((row) => row.specificationTitle)
-        ? [
-            [
-              textCell("Сума договору за API"),
-              textCell(""),
-              ...(showBuyerColumn ? [textCell("")] : []),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              numberCell(procedure.rows[0]?.contractTotalAmount),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-            ],
-            [
-              textCell("Сума по факту"),
-              textCell(""),
-              ...(showBuyerColumn ? [textCell("")] : []),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              numberCell(getCalculatedContractTotal(procedure.rows)),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-              textCell(""),
-            ],
-          ]
-        : []),
-    ],
   );
 }
 

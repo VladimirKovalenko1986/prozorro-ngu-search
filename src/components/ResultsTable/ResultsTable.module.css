@@ -297,30 +297,14 @@
   animation: row-add 900ms ease-out;
 }
 
-tbody tr:not(.contractTotalRow) td {
+tbody tr td {
   transition:
     background-color 180ms ease,
     color 180ms ease;
 }
 
-tbody tr:not(.contractTotalRow):hover td {
+tbody tr:hover td {
   background: var(--hover-background);
-}
-
-.contractTotalRow td {
-  background: var(--total-background);
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-color);
-  font-weight: 800;
-}
-
-.contractTotalRowFact td {
-  background: var(--fact-background);
-  border-bottom: 2px solid var(--fact-border);
-}
-
-.contractTotalRow td:first-child {
-  text-align: right;
 }
 
 .processedCheck,

@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import { getCalculatedContractTotal } from "../../domain/prozorroRows.js";
 import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
 import { formatQuantity } from "../../utils/formatQuantity.js";
@@ -72,7 +71,6 @@ export default function ResultsTable({
               procedure={procedure}
               recentlyAddedProcedureId={recentlyAddedProcedureId}
               showBuyerColumn={showBuyerColumn}
-              tableColumns={tableColumns}
             />
           ))}
         </tbody>
@@ -128,14 +126,7 @@ function ProcedureRows({
   procedure,
   recentlyAddedProcedureId,
   showBuyerColumn,
-  tableColumns,
 }) {
-  const hasSpecificationRows = procedure.rows.some(
-    (row) => row.specificationTitle,
-  );
-  const calculatedContractTotal = getCalculatedContractTotal(procedure.rows);
-  const totalColSpan = tableColumns.length - 4;
-
   return (
     <Fragment>
       {procedure.rows.map((row, rowIndex) => {
@@ -270,30 +261,6 @@ function ProcedureRows({
         );
       })}
 
-      {hasSpecificationRows ? (
-        <>
-          <tr className={css.contractTotalRow}>
-            <td colSpan={totalColSpan}>Сума договору за API</td>
-            <td>
-              {formatMoney(
-                procedure.rows[0]?.contractTotalAmount,
-                procedure.rows[0]?.contractCurrency,
-              )}
-            </td>
-            <td colSpan="3" />
-          </tr>
-          <tr className={`${css.contractTotalRow} ${css.contractTotalRowFact}`}>
-            <td colSpan={totalColSpan}>Сума по факту</td>
-            <td>
-              {formatMoney(
-                calculatedContractTotal,
-                procedure.rows[0]?.contractCurrency,
-              )}
-            </td>
-            <td colSpan="3" />
-          </tr>
-        </>
-      ) : null}
     </Fragment>
   );
 }

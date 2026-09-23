@@ -176,16 +176,6 @@ export function getLotAndSpecificationLabel(row) {
   return parts.join(" | ") || "Без лотів";
 }
 
-export function getCalculatedContractTotal(rows) {
-  const total = rows.reduce(
-    (sum, row) =>
-      sum + (row.specificationTitle ? toNumber(row.contractAmount) || 0 : 0),
-    0,
-  );
-
-  return total || null;
-}
-
 export function getBuyerName(details, item) {
   return (
     details.procuringEntity?.name ||
@@ -298,7 +288,6 @@ export function buildLotRow(
     expectedAmount: expected.amount,
     expectedCurrency: expected.currency,
     contractAmount: contractValue.amount,
-    contractTotalAmount: contractValue.amount,
     contractCurrency: contractValue.currency,
     contractNumber: getContractNumber(contractDetails, contract),
     dateSigned: getContractSignedDate(contractDetails, contract),
