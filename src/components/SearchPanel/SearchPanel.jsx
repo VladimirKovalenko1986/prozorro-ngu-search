@@ -30,7 +30,6 @@ export default function SearchPanel({
   onDkCodeClear,
   onDkCodeRemove,
   onSearch,
-  onSearchAndExport,
   onStopSearch,
   onStorageImport,
   searchFinishedMessage,
@@ -57,7 +56,6 @@ export default function SearchPanel({
               Замовник
               <select
                 className={css.control}
-                disabled={disabled}
                 value={buyer}
                 onChange={(event) => onBuyerChange(event.target.value)}
               >
@@ -73,7 +71,6 @@ export default function SearchPanel({
               З дати
               <input
                 className={css.control}
-                disabled={disabled}
                 type="date"
                 value={dateFrom}
                 onChange={(event) => onDateFromChange(event.target.value)}
@@ -84,7 +81,6 @@ export default function SearchPanel({
               По дату
               <input
                 className={css.control}
-                disabled={disabled}
                 type="date"
                 value={dateTo}
                 onChange={(event) => onDateToChange(event.target.value)}
@@ -108,16 +104,6 @@ export default function SearchPanel({
           />
 
           <div className={css.utilityRow}>
-            <button
-              className={css.downloadSearchButton}
-              disabled={disabled}
-              onClick={onSearchAndExport}
-              type="button"
-            >
-              <span className={css.downloadSearchIcon} aria-hidden="true">↓</span>
-              {disabled ? "Пошук триває…" : "Шукати й завантажити Excel"}
-            </button>
-
             <ExportExcelButton
               buyer={buyer}
               dateFrom={dateFrom}
@@ -182,7 +168,7 @@ export default function SearchPanel({
 }
 
 function SearchProgress({ addingProcedureTitle, disabled, onStop, progress }) {
-  const progressPercent = progress.stage === "completed" || progress.stage === "exporting"
+  const progressPercent = progress.stage === "completed"
     ? 100
     : progress.totalPages
       ? Math.min(100, Math.round((progress.currentPage / progress.totalPages) * 100))
@@ -190,7 +176,6 @@ function SearchProgress({ addingProcedureTitle, disabled, onStop, progress }) {
   const stageLabels = {
     completed: "Пошук завершено",
     error: "Пошук перервано помилкою",
-    exporting: "Формую Excel",
     running: "Пошук триває",
     stopped: "Пошук зупинено",
   };
@@ -203,9 +188,7 @@ function SearchProgress({ addingProcedureTitle, disabled, onStop, progress }) {
           <div>
             <strong>{stageLabels[progress.stage]}</strong>
             <span>
-              {progress.stage === "exporting"
-                ? `Зібрано ${progress.found} процедур. Готую файл до завантаження.`
-                : addingProcedureTitle
+              {addingProcedureTitle
                 ? `Додаю: ${addingProcedureTitle}`
                 : progress.buyerIndex
                   ? `Замовник ${progress.buyerIndex} з ${progress.buyerCount} · сторінка ${progress.currentPage} з ${progress.totalPages}`
@@ -221,14 +204,6 @@ function SearchProgress({ addingProcedureTitle, disabled, onStop, progress }) {
           </button>
         ) : null}
       </div>
-
-      {progress.stage === "exporting" ? (
-        <div className={css.excelJourney} aria-hidden="true">
-          <span className={css.journeyTrail} />
-          <span className={css.journeyRunner}>P</span>
-          <span className={css.journeyFile}>XLSX</span>
-        </div>
-      ) : null}
 
       <div
         aria-label="Прогрес перевірки сторінок поточного замовника"

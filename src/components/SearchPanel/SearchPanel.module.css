@@ -233,54 +233,6 @@ select.control {
   cursor: not-allowed;
 }
 
-.downloadSearchButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 56px;
-  gap: 10px;
-  border: 1px solid rgba(127, 92, 255, 0.42);
-  border-radius: 13px;
-  background: linear-gradient(135deg, #6450e8, #8750e9);
-  box-shadow: 0 10px 24px rgba(111, 77, 230, 0.24);
-  color: white;
-  padding: 0 19px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 850;
-  transition:
-    box-shadow 180ms ease,
-    filter 180ms ease,
-    transform 180ms ease;
-}
-
-.downloadSearchButton:hover:not(:disabled) {
-  box-shadow: 0 14px 30px rgba(111, 77, 230, 0.36);
-  filter: saturate(1.14);
-  transform: translateY(-2px);
-}
-
-.downloadSearchButton:active:not(:disabled) {
-  transform: translateY(1px) scale(0.99);
-}
-
-.downloadSearchButton:disabled {
-  background: var(--disabled-button);
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-.downloadSearchIcon {
-  display: grid;
-  place-items: center;
-  width: 23px;
-  height: 23px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  font-size: 20px;
-  line-height: 1;
-}
-
 .buttonArrow {
   font-size: 21px;
   transition: transform 180ms ease;
@@ -643,71 +595,6 @@ select.control {
   transition: width 300ms ease;
 }
 
-.excelJourney {
-  position: relative;
-  height: 46px;
-  margin-top: 13px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent-border) 80%, transparent);
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--accent-soft) 28%, transparent);
-}
-
-.journeyTrail {
-  position: absolute;
-  top: 22px;
-  right: 57px;
-  left: 30px;
-  border-top: 2px dashed color-mix(in srgb, var(--accent-color) 40%, transparent);
-}
-
-.journeyRunner {
-  position: absolute;
-  z-index: 1;
-  top: 10px;
-  left: 10px;
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 9px 9px 11px 11px;
-  background: linear-gradient(135deg, #147fe8, #665cf4);
-  box-shadow: 0 6px 15px rgba(54, 91, 234, 0.35);
-  color: white;
-  font-size: 12px;
-  font-weight: 950;
-  animation: excel-run 1.7s cubic-bezier(0.42, 0, 0.26, 1) infinite;
-}
-
-.journeyRunner::after {
-  position: absolute;
-  right: calc(100% + 5px);
-  width: 13px;
-  height: 2px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-color) 55%, transparent);
-  content: "";
-}
-
-.journeyFile {
-  position: absolute;
-  z-index: 2;
-  top: 9px;
-  right: 12px;
-  display: grid;
-  place-items: center;
-  width: 37px;
-  height: 27px;
-  border: 1px solid rgba(22, 151, 83, 0.36);
-  border-radius: 7px;
-  background: #e8fff0;
-  box-shadow: 0 4px 12px rgba(22, 151, 83, 0.15);
-  color: #087a50;
-  font-size: 8px;
-  font-weight: 950;
-  letter-spacing: 0.25px;
-}
-
 .progressStats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -867,9 +754,6 @@ select.control {
     align-items: stretch;
   }
 
-  .downloadSearchButton {
-    flex: 1 1 260px;
-  }
 }
 
 @media (max-width: 560px) {
@@ -887,10 +771,6 @@ select.control {
   }
 
   .secondaryButton {
-    width: 100%;
-  }
-
-  .downloadSearchButton {
     width: 100%;
   }
 
@@ -977,8 +857,7 @@ select.control {
   .searchCard,
   .statusDot,
   .searchSpinner,
-  .searchFinished,
-  .journeyRunner {
+  .searchFinished {
     animation: none;
   }
 
@@ -998,8 +877,7 @@ select.control {
   }
 
   .progressTrack span,
-  .stopButton,
-  .downloadSearchButton {
+  .stopButton {
     transition: none;
   }
 }
@@ -1027,33 +905,6 @@ select.control {
 @keyframes search-spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes excel-run {
-  0% {
-    left: 10px;
-    opacity: 0;
-    transform: scale(0.8);
-  }
-
-  12% {
-    left: 10px;
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  72% {
-    left: calc(100% - 69px);
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  83%,
-  100% {
-    left: calc(100% - 69px);
-    opacity: 0;
-    transform: scale(0.72);
   }
 }
 
