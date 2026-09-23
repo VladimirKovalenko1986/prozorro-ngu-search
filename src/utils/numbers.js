@@ -9,9 +9,3 @@ export function toNumber(value) {
 
   return Number.isFinite(number) ? number : null;
 }
-
-export function addVat(amount) {
-  const number = toNumber(amount);
-
-  return number ? number * 1.2 : null;
-}

@@ -7,7 +7,7 @@ import { getDateFromTenderId } from "../utils/dateHelpers.js";
 import { formatDate } from "../utils/formatDate.js";
 import { formatMoney } from "../utils/formatMoney.js";
 import { formatQuantity } from "../utils/formatQuantity.js";
-import { addVat, toNumber } from "../utils/numbers.js";
+import { toNumber } from "../utils/numbers.js";
 import { normalizeText } from "../utils/text.js";
 import { getStatusTone, procedureTypeLabel, statusLabel } from "../constants/labels.js";
 
@@ -99,22 +99,6 @@ export function getSpecificationAmount(quantity, unitPrice) {
   const amount = toNumber(quantity) * toNumber(unitPrice);
 
   return Number.isFinite(amount) ? amount : null;
-}
-
-export function isFopSupplier(name) {
-  const normalized = normalizeText(name);
-
-  return (
-    /\bфоп\b/.test(normalized) ||
-    normalized.includes("фізична особа підприємець") ||
-    normalized.includes("фiзична особа підприємець")
-  );
-}
-
-export function getUnitPriceWithTaxRule(item, supplierName) {
-  const unitPrice = getItemUnitPrice(item);
-
-  return isFopSupplier(supplierName) ? unitPrice : addVat(unitPrice);
 }
 
 export function getItemDescription(item) {
@@ -311,9 +295,7 @@ export function buildLotRow(
   });
 
   if (visibleSpecificationItems.length > 0) {
-    const itemUnitPrices = visibleSpecificationItems.map((item) =>
-      getUnitPriceWithTaxRule(item, baseRow.supplierName),
-    );
+    const itemUnitPrices = visibleSpecificationItems.map(getItemUnitPrice);
     const hasAllUnitPrices = itemUnitPrices.every(Boolean);
 
     if (!hasAllUnitPrices) {
