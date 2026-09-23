@@ -9,6 +9,7 @@ import { getDefaultDateFrom, getDefaultDateTo, isDateInPeriod, normalizeDateRang
 import { readStoredChecks, writeStoredChecks } from "../utils/storageChecks.js";
 import { normalizeText } from "../utils/text.js";
 import { wait } from "../utils/async.js";
+import { downloadProzorroExcel } from "../utils/prozorroExcel.js";
 import {
   buildFallbackDetails,
   buildFilterOptions,
@@ -323,8 +324,8 @@ export function useProzorroSearch() {
     });
   }
 
-  async function handleSearch(event) {
-    event.preventDefault();
+  async function handleSearch(event, { downloadAfterSearch = false } = {}) {
+    event?.preventDefault();
 
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
     const searchRange = normalizeDateRange(dateFrom, dateTo);
@@ -459,14 +460,15 @@ export function useProzorroSearch() {
               continue;
             }
 
-            setAddingProcedureTitle(procedureResult.title);
-            await wait(ADD_ROW_ANIMATION_MS, signal);
-
             foundTenderIds.add(procedureResult.tenderID);
             found.push(procedureResult);
-            setRecentlyAddedProcedureId(procedureResult.id);
-            setResults([...found]);
-            setAddingProcedureTitle("");
+            if (!downloadAfterSearch) {
+              setAddingProcedureTitle(procedureResult.title);
+              await wait(ADD_ROW_ANIMATION_MS, signal);
+              setRecentlyAddedProcedureId(procedureResult.id);
+              setResults([...found]);
+              setAddingProcedureTitle("");
+            }
             updateSearchProgress({ found: found.length });
 
             await wait(TENDER_REQUEST_DELAY_MS, signal);
@@ -488,14 +490,33 @@ export function useProzorroSearch() {
         }
       }
 
-      setStatus(
-        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${activeDkCodes.length ? `. ДК-кодів: ${activeDkCodes.length}` : ""}`,
-      );
-      setSearchFinishedMessage(
-        `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
-      );
+      if (downloadAfterSearch) {
+        setStatus(`Знайдено ${found.length} процедур. Формую Excel…`);
+        updateSearchProgress({ found: found.length, stage: "exporting" });
+        await wait(0, signal);
+        await downloadProzorroExcel({
+          buyer: buyer.label,
+          dateFrom: searchRange.dateFrom,
+          dateTo: searchRange.dateTo,
+          results: found,
+          showBuyerColumn: buyer.label === "НГУ",
+        });
+        setResults([...found]);
+        setStatus(`Excel завантажено. Знайдено процедур: ${found.length}.`);
+        setSearchFinishedMessage(
+          `Excel сформовано й завантажено. Усього процедур: ${found.length}.`,
+        );
+      } else {
+        setStatus(
+          `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${activeDkCodes.length ? `. ДК-кодів: ${activeDkCodes.length}` : ""}`,
+        );
+        setSearchFinishedMessage(
+          `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
+        );
+      }
       updateSearchProgress({ found: found.length, stage: "completed" });
     } catch (error) {
+      if (downloadAfterSearch) setResults([...found]);
       handleSearchError(error, found.length);
     } finally {
       setLoading(false);
@@ -504,6 +525,10 @@ export function useProzorroSearch() {
         searchControllerRef.current = null;
       }
     }
+  }
+
+  function handleSearchAndExport() {
+    return handleSearch(null, { downloadAfterSearch: true });
   }
 
   async function handleContractRemoteSearch() {
@@ -699,6 +724,7 @@ export function useProzorroSearch() {
     handleBuyerChange,
     handleContractRemoteSearch,
     handleSearch,
+    handleSearchAndExport,
     handleStopSearch,
     handleStorageImport,
     hasActiveFilters,

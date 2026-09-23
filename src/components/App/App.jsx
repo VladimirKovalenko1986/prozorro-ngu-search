@@ -92,6 +92,7 @@ function SearchPage({ search }) {
         onDkCodeClear={search.clearDkCodes}
         onDkCodeRemove={search.removeDkCode}
         onSearch={search.handleSearch}
+        onSearchAndExport={search.handleSearchAndExport}
         onStopSearch={search.handleStopSearch}
         onStorageImport={search.handleStorageImport}
         searchFinishedMessage={search.searchFinishedMessage}
