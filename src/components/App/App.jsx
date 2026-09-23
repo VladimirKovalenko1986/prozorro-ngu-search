@@ -2,11 +2,13 @@ import { useState } from "react";
 import { BUYERS } from "../../constants/buyers.js";
 import { STORAGE_KEYS } from "../../constants/storage.js";
 import FilterSummary from "../FilterSummary/FilterSummary.jsx";
+import PriceAnalysisResults from "../PriceAnalysisResults/PriceAnalysisResults.jsx";
 import ResultsTable from "../ResultsTable/ResultsTable.jsx";
 import ScrollToSearchButton from "../ScrollToSearchButton/ScrollToSearchButton.jsx";
 import SearchPanel from "../SearchPanel/SearchPanel.jsx";
 import ThemeToggle from "../ThemeToggle/ThemeToggle.jsx";
 import { useProzorroSearch } from "../../hooks/useProzorroSearch.js";
+import { usePriceAnalysisSearch } from "../../hooks/usePriceAnalysisSearch.js";
 import { useTheme } from "../../hooks/useTheme.js";
 import css from "./App.module.css";
 
@@ -154,6 +156,7 @@ function SearchPage({ search }) {
 function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
   const isEdrpouSearch = buyer === EDRPOU_SEARCH_OPTION;
   const hasCompleteEdrpou = edrpou.length === 8;
+  const analysisSearch = usePriceAnalysisSearch({ buyer, edrpou });
 
   return (
     <section className={css.priceAnalysis}>
@@ -201,6 +204,19 @@ function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
           ) : null}
         </form>
       </div>
+
+      {(!isEdrpouSearch || hasCompleteEdrpou) ? (
+        <PriceAnalysisResults
+          error={analysisSearch.error}
+          hasMore={analysisSearch.hasMore}
+          loading={analysisSearch.loading}
+          loadingMore={analysisSearch.loadingMore}
+          onLoadMore={analysisSearch.loadMore}
+          procedures={analysisSearch.procedures}
+          progress={analysisSearch.progress}
+          showBuyerColumn={buyer === "НГУ"}
+        />
+      ) : null}
     </section>
   );
 }

@@ -271,6 +271,8 @@ export function buildLotRow(
     supplierName: supplier?.name || "Немає контрагента",
     expectedAmount: expected.amount,
     expectedCurrency: expected.currency,
+    expectedUnitPrice:
+      expected.amount && quantity ? expected.amount / quantity : null,
     contractAmount: contractValue.amount,
     contractCurrency: contractValue.currency,
     contractNumber: getContractNumber(contractDetails, contract),
