@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import css from "./ScrollToSearchButton.module.css";
 
-export default function ScrollToSearchButton() {
+export default function ScrollToSearchButton({
+  targetId = "search-panel",
+  ariaLabel = "Повернутись до пошуку",
+}) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -15,11 +18,11 @@ export default function ScrollToSearchButton() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  function scrollToSearchPanel() {
-    const searchPanel = document.getElementById("search-panel");
+  function scrollToTarget() {
+    const target = document.getElementById(targetId);
 
-    if (searchPanel) {
-      searchPanel.scrollIntoView({
+    if (target) {
+      target.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
@@ -30,8 +33,8 @@ export default function ScrollToSearchButton() {
     <button
       className={`${css.button} ${isVisible ? css.visible : ""}`}
       type="button"
-      onClick={scrollToSearchPanel}
-      aria-label="Повернутись до пошуку"
+      onClick={scrollToTarget}
+      aria-label={ariaLabel}
     >
       ↑
     </button>

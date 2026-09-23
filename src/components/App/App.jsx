@@ -159,7 +159,7 @@ function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
   const analysisSearch = usePriceAnalysisSearch({ buyer, edrpou });
 
   return (
-    <section className={css.priceAnalysis}>
+    <section className={css.priceAnalysis} id="price-analysis">
       <div className={css.priceAnalysisHeader}>
         <div>
           <span className={css.priceAnalysisBadge}>Аналіз цін</span>
@@ -217,6 +217,11 @@ function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
           showBuyerColumn={buyer === "НГУ"}
         />
       ) : null}
+
+      <ScrollToSearchButton
+        ariaLabel="Повернутись на початок аналізу цін"
+        targetId="price-analysis"
+      />
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
 import { formatQuantity } from "../../utils/formatQuantity.js";
@@ -15,6 +15,35 @@ export default function PriceAnalysisResults({
   showBuyerColumn,
 }) {
   const isInitialLoading = loading && procedures.length === 0;
+  const nextBatchIndexRef = useRef(null);
+
+  useEffect(() => {
+    const nextBatchIndex = nextBatchIndexRef.current;
+
+    if (nextBatchIndex === null || loadingMore) {
+      return;
+    }
+
+    nextBatchIndexRef.current = null;
+
+    if (procedures.length <= nextBatchIndex) {
+      return;
+    }
+
+    const firstNewProcedure = document.querySelector(
+      `[data-analysis-procedure-index="${nextBatchIndex}"]`,
+    );
+
+    firstNewProcedure?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [loadingMore, procedures.length]);
+
+  function handleLoadMore() {
+    nextBatchIndexRef.current = procedures.length;
+    onLoadMore();
+  }
 
   return (
     <section className={css.section} aria-live="polite">
@@ -50,10 +79,11 @@ export default function PriceAnalysisResults({
               </tr>
             </thead>
             <tbody>
-              {procedures.map((procedure) => (
+              {procedures.map((procedure, procedureIndex) => (
                 <ProcedureRows
                   key={procedure.id}
                   procedure={procedure}
+                  procedureIndex={procedureIndex}
                   showBuyerColumn={showBuyerColumn}
                 />
               ))}
@@ -67,7 +97,7 @@ export default function PriceAnalysisResults({
           <button
             className={css.loadMoreButton}
             disabled={loading}
-            onClick={onLoadMore}
+            onClick={handleLoadMore}
             type="button"
           >
             {loadingMore ? <span className={css.buttonSpinner} aria-hidden="true" /> : null}
@@ -79,11 +109,14 @@ export default function PriceAnalysisResults({
   );
 }
 
-function ProcedureRows({ procedure, showBuyerColumn }) {
+function ProcedureRows({ procedure, procedureIndex, showBuyerColumn }) {
   return (
     <Fragment>
       {procedure.rows.map((row, rowIndex) => (
-        <tr key={row.id}>
+        <tr
+          data-analysis-procedure-index={rowIndex === 0 ? procedureIndex : undefined}
+          key={row.id}
+        >
           {rowIndex === 0 ? (
             <td className={css.subjectCell} rowSpan={procedure.rows.length}>
               <a
