@@ -27,11 +27,26 @@ function buildCell(cell, columnIndex, rowIndex) {
     return `<c r="${reference}" s="${style}"><v>${Number(cell.value)}</v></c>`;
   }
 
-  const style = cell.type === "header" ? 3 : 0;
+  const style = cell.type === "header" ? 3 : cell.type === "link" ? 4 : 0;
   return `<c r="${reference}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(cell.value)}</t></is></c>`;
 }
 
-function buildSheetXml(columns, rows) {
+function getHyperlinks(rows) {
+  return rows.flatMap((row, rowIndex) =>
+    row.flatMap((cell, columnIndex) => {
+      if (cell.type !== "link" || !cell.url) {
+        return [];
+      }
+
+      return [{
+        reference: `${getColumnName(columnIndex)}${rowIndex + 2}`,
+        url: cell.url,
+      }];
+    }),
+  );
+}
+
+function buildSheetXml(columns, rows, hyperlinks) {
   const allRows = [
     columns.map((value) => ({ type: "header", value })),
     ...rows,
@@ -63,13 +78,35 @@ function buildSheetXml(columns, rows) {
   const lastCell = `${getColumnName(columns.length - 1)}${allRows.length}`;
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <sheetViews><sheetView workbookViewId="0"/></sheetViews>
   <sheetFormatPr defaultRowHeight="15"/>
   <cols>${columnsXml}</cols>
   <sheetData>${rowXml}</sheetData>
   <autoFilter ref="A1:${lastCell}"/>
+  ${
+    hyperlinks.length > 0
+      ? `<hyperlinks>${hyperlinks
+          .map(
+            (hyperlink, index) =>
+              `<hyperlink ref="${hyperlink.reference}" r:id="rId${index + 1}"/>`,
+          )
+          .join("")}</hyperlinks>`
+      : ""
+  }
 </worksheet>`;
+}
+
+function buildSheetRelationshipsXml(hyperlinks) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${hyperlinks
+    .map(
+      (hyperlink, index) =>
+        `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${escapeXml(hyperlink.url)}" TargetMode="External"/>`,
+    )
+    .join("")}
+</Relationships>`;
 }
 
 const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -103,9 +140,10 @@ const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <numFmt numFmtId="164" formatCode="#,##0.00"/>
     <numFmt numFmtId="165" formatCode="#,##0"/>
   </numFmts>
-  <fonts count="2">
+  <fonts count="3">
     <font><sz val="11"/><name val="Aptos"/></font>
     <font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Aptos"/></font>
+    <font><u/><color rgb="FF0563C1"/><sz val="11"/><name val="Aptos"/></font>
   </fonts>
   <fills count="3">
     <fill><patternFill patternType="none"/></fill>
@@ -114,16 +152,18 @@ const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   </fills>
   <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="4">
+  <cellXfs count="5">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
     <xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
     <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
   </cellXfs>
 </styleSheet>`;
 
 export async function createXlsxFile({ columns, rows }) {
   const { strToU8, zipSync } = await import("fflate");
+  const hyperlinks = getHyperlinks(rows);
 
   return zipSync(
     {
@@ -132,7 +172,14 @@ export async function createXlsxFile({ columns, rows }) {
       "xl/_rels/workbook.xml.rels": strToU8(workbookRelationshipsXml),
       "xl/styles.xml": strToU8(stylesXml),
       "xl/workbook.xml": strToU8(workbookXml),
-      "xl/worksheets/sheet1.xml": strToU8(buildSheetXml(columns, rows)),
+      "xl/worksheets/sheet1.xml": strToU8(buildSheetXml(columns, rows, hyperlinks)),
+      ...(hyperlinks.length > 0
+        ? {
+            "xl/worksheets/_rels/sheet1.xml.rels": strToU8(
+              buildSheetRelationshipsXml(hyperlinks),
+            ),
+          }
+        : {}),
     },
     { level: 6 },
   );

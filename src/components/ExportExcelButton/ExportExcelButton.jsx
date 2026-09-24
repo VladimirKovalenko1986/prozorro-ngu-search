@@ -32,6 +32,14 @@ function textCell(value) {
   };
 }
 
+function procedureLinkCell(tenderID) {
+  return {
+    type: "link",
+    url: `https://prozorro.gov.ua/tender/${tenderID}`,
+    value: tenderID ?? "",
+  };
+}
+
 function numberCell(value, format = "#,##0.00") {
   const number = Number(value);
 
@@ -64,7 +72,7 @@ function buildExcelRows(results, showBuyerColumn) {
       textCell(procedure.title),
       textCell(procedure.procedureType),
       ...(showBuyerColumn ? [textCell(procedure.buyerUnit)] : []),
-      textCell(procedure.tenderID),
+      procedureLinkCell(procedure.tenderID),
       textCell(formatDate(procedure.procedureDate)),
       textCell(getLotAndSpecificationLabel(row)),
       numberCell(row.expectedAmount),
