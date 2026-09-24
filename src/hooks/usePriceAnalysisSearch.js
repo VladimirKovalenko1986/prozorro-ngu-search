@@ -27,6 +27,7 @@ export function usePriceAnalysisSearch({ buyer, edrpou }) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState({ checked: 0, total: 0 });
   const proceduresRef = useRef([]);
@@ -150,23 +151,33 @@ export function usePriceAnalysisSearch({ buyer, edrpou }) {
   }
 
   useEffect(() => {
-    const requestId = requestIdRef.current + 1;
-
-    requestIdRef.current = requestId;
-    const startTimeout = window.setTimeout(() => {
+    const resetTimeout = window.setTimeout(() => {
+      requestIdRef.current += 1;
+      controllerRef.current?.abort();
+      controllerRef.current = null;
       loadingRef.current = false;
       clearResults();
-
-      if (buyer === "edrpou-search" && !buyerCodes.length) return;
-
-      void loadBatch({ buyerCodes, replace: true, requestId });
+      setHasStarted(false);
     }, 0);
 
     return () => {
-      window.clearTimeout(startTimeout);
+      window.clearTimeout(resetTimeout);
       controllerRef.current?.abort();
     };
   }, [buyer, buyerCodes, buyerCodesKey]);
+
+  function startAnalysis() {
+    if (!buyerCodes.length || loadingRef.current) return;
+
+    const requestId = requestIdRef.current + 1;
+
+    requestIdRef.current = requestId;
+    controllerRef.current?.abort();
+    loadingRef.current = false;
+    clearResults();
+    setHasStarted(true);
+    void loadBatch({ buyerCodes, replace: true, requestId });
+  }
 
   function loadMore() {
     if (loadingRef.current || !hasMore) return;
@@ -181,10 +192,12 @@ export function usePriceAnalysisSearch({ buyer, edrpou }) {
   return {
     error,
     hasMore,
+    hasStarted,
     loading,
     loadingMore,
     loadMore,
     procedures,
     progress,
+    startAnalysis,
   };
 }

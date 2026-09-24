@@ -168,7 +168,13 @@ function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
             <p>Оберіть замовника для майбутнього порівняння цін.</p>
           </div>
 
-          <form className={css.priceSearchForm} onSubmit={(event) => event.preventDefault()}>
+          <form
+            className={css.priceSearchForm}
+            onSubmit={(event) => {
+              event.preventDefault();
+              analysisSearch.startAnalysis();
+            }}
+          >
             <label className={css.priceControl}>
               Замовник
               <select value={buyer} onChange={(event) => onBuyerChange(event.target.value)}>
@@ -203,10 +209,18 @@ function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
                 </p>
               </div>
             ) : null}
+
+            <button
+              className={css.priceStartButton}
+              disabled={analysisSearch.loading || (isEdrpouSearch && !hasCompleteEdrpou)}
+              type="submit"
+            >
+              {analysisSearch.loading ? "Аналізую…" : "Почати аналіз цін"}
+            </button>
           </form>
         </div>
 
-        {(!isEdrpouSearch || hasCompleteEdrpou) ? (
+        {analysisSearch.hasStarted ? (
           <PriceAnalysisResults
             error={analysisSearch.error}
             hasMore={analysisSearch.hasMore}
