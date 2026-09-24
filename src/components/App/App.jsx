@@ -159,70 +159,72 @@ function PriceAnalysisPage({ buyer, edrpou, onBuyerChange, onEdrpouChange }) {
   const analysisSearch = usePriceAnalysisSearch({ buyer, edrpou });
 
   return (
-    <section className={css.priceAnalysis} id="price-analysis">
-      <div className={css.priceAnalysisHeader}>
-        <div>
-          <span className={css.priceAnalysisBadge}>Аналіз цін</span>
-          <h2>Пошук закупівель</h2>
-          <p>Оберіть замовника для майбутнього порівняння цін.</p>
+    <>
+      <section className={css.priceAnalysis} id="price-analysis">
+        <div className={css.priceAnalysisHeader}>
+          <div>
+            <span className={css.priceAnalysisBadge}>Аналіз цін</span>
+            <h2>Пошук закупівель</h2>
+            <p>Оберіть замовника для майбутнього порівняння цін.</p>
+          </div>
+
+          <form className={css.priceSearchForm} onSubmit={(event) => event.preventDefault()}>
+            <label className={css.priceControl}>
+              Замовник
+              <select value={buyer} onChange={(event) => onBuyerChange(event.target.value)}>
+                {BUYERS.map((item) => (
+                  <option key={item.label} value={item.label}>
+                    {item.label}
+                  </option>
+                ))}
+                <option value={EDRPOU_SEARCH_OPTION}>Пошук по ЄДРПОУ</option>
+              </select>
+            </label>
+
+            {isEdrpouSearch ? (
+              <div className={css.priceEdrpouForm}>
+                <label className={css.priceControl}>
+                  Код ЄДРПОУ
+                  <input
+                    inputMode="numeric"
+                    maxLength="8"
+                    onChange={(event) =>
+                      onEdrpouChange(event.target.value.replace(/\D/g, "").slice(0, 8))
+                    }
+                    placeholder="Наприклад: 08803498"
+                    type="text"
+                    value={edrpou}
+                  />
+                </label>
+                <p className={css.priceSearchHint}>
+                  {hasCompleteEdrpou
+                    ? `Буде використано ЄДРПОУ: ${edrpou}.`
+                    : "Введіть восьмизначний код ЄДРПОУ."}
+                </p>
+              </div>
+            ) : null}
+          </form>
         </div>
 
-        <form className={css.priceSearchForm} onSubmit={(event) => event.preventDefault()}>
-          <label className={css.priceControl}>
-            Замовник
-            <select value={buyer} onChange={(event) => onBuyerChange(event.target.value)}>
-              {BUYERS.map((item) => (
-                <option key={item.label} value={item.label}>
-                  {item.label}
-                </option>
-              ))}
-              <option value={EDRPOU_SEARCH_OPTION}>Пошук по ЄДРПОУ</option>
-            </select>
-          </label>
-
-          {isEdrpouSearch ? (
-            <div className={css.priceEdrpouForm}>
-              <label className={css.priceControl}>
-                Код ЄДРПОУ
-                <input
-                  inputMode="numeric"
-                  maxLength="8"
-                  onChange={(event) =>
-                    onEdrpouChange(event.target.value.replace(/\D/g, "").slice(0, 8))
-                  }
-                  placeholder="Наприклад: 08803498"
-                  type="text"
-                  value={edrpou}
-                />
-              </label>
-              <p className={css.priceSearchHint}>
-                {hasCompleteEdrpou
-                  ? `Буде використано ЄДРПОУ: ${edrpou}.`
-                  : "Введіть восьмизначний код ЄДРПОУ."}
-              </p>
-            </div>
-          ) : null}
-        </form>
-      </div>
-
-      {(!isEdrpouSearch || hasCompleteEdrpou) ? (
-        <PriceAnalysisResults
-          error={analysisSearch.error}
-          hasMore={analysisSearch.hasMore}
-          loading={analysisSearch.loading}
-          loadingMore={analysisSearch.loadingMore}
-          onLoadMore={analysisSearch.loadMore}
-          procedures={analysisSearch.procedures}
-          progress={analysisSearch.progress}
-          showBuyerColumn={buyer === "НГУ"}
-        />
-      ) : null}
+        {(!isEdrpouSearch || hasCompleteEdrpou) ? (
+          <PriceAnalysisResults
+            error={analysisSearch.error}
+            hasMore={analysisSearch.hasMore}
+            loading={analysisSearch.loading}
+            loadingMore={analysisSearch.loadingMore}
+            onLoadMore={analysisSearch.loadMore}
+            procedures={analysisSearch.procedures}
+            progress={analysisSearch.progress}
+            showBuyerColumn={buyer === "НГУ"}
+          />
+        ) : null}
+      </section>
 
       <ScrollToSearchButton
         ariaLabel="Повернутись на початок аналізу цін"
         targetId="price-analysis"
       />
-    </section>
+    </>
   );
 }
 
