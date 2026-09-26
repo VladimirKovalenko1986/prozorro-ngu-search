@@ -18,7 +18,14 @@ export default function PriceAnalysisResults({
 }) {
   const isInitialLoading = loading && procedures.length === 0;
   const nextBatchIndexRef = useRef(null);
-  const benchmarks = usePriceBenchmarks(procedures, !loading && procedures.length > 0);
+  const { benchmarks, progress: benchmarkProgress } = usePriceBenchmarks(
+    procedures,
+    !loading && procedures.length > 0,
+  );
+  const hasBenchmarkProgress = benchmarkProgress.total > 0;
+  const benchmarkPercent = hasBenchmarkProgress
+    ? Math.round((benchmarkProgress.completed / benchmarkProgress.total) * 100)
+    : 0;
 
   useEffect(() => {
     const nextBatchIndex = nextBatchIndexRef.current;
@@ -61,6 +68,20 @@ export default function PriceAnalysisResults({
         </div>
         {loading ? <span className={css.loadingBadge}>Оновлюю</span> : null}
       </header>
+
+      {hasBenchmarkProgress ? (
+        <div className={css.benchmarkProgress}>
+          {benchmarkProgress.completed < benchmarkProgress.total ? (
+            <span className={css.benchmarkProgressSpinner} aria-hidden="true" />
+          ) : null}
+          <span>
+            Аналіз цін: {benchmarkProgress.completed} з {benchmarkProgress.total} позицій ДК
+          </span>
+          <div className={css.benchmarkProgressTrack}>
+            <span style={{ width: `${benchmarkPercent}%` }} />
+          </div>
+        </div>
+      ) : null}
 
       {error ? <p className={css.error}>{error}</p> : null}
 
@@ -154,7 +175,11 @@ function ProcedureRows({ benchmarks, procedure, procedureIndex, showBuyerColumn 
           <td>{formatMoney(row.expectedUnitPrice, row.expectedCurrency)}</td>
           <td>{row.contractNumber}</td>
           <td className={css.benchmarkCell}>
-            <PriceBenchmark benchmark={benchmarks[getPriceBenchmarkTarget(row)?.key]} row={row} />
+            <PriceBenchmark
+              benchmark={benchmarks[getPriceBenchmarkTarget(procedure, row)?.key]}
+              procedure={procedure}
+              row={row}
+            />
           </td>
         </tr>
       ))}
@@ -162,15 +187,20 @@ function ProcedureRows({ benchmarks, procedure, procedureIndex, showBuyerColumn 
   );
 }
 
-function PriceBenchmark({ benchmark, row }) {
-  const target = getPriceBenchmarkTarget(row);
+function PriceBenchmark({ benchmark, procedure, row }) {
+  const target = getPriceBenchmarkTarget(procedure, row);
 
   if (!target) {
     return <span className={css.benchmarkMuted}>Немає точного ДК або одиниці</span>;
   }
 
   if (!benchmark || benchmark.status === "loading") {
-    return <span className={css.benchmarkMuted}>Шукаю аналоги…</span>;
+    return (
+      <span className={css.benchmarkLoading}>
+        <span className={css.benchmarkCellSpinner} aria-hidden="true" />
+        Шукаю аналоги…
+      </span>
+    );
   }
 
   if (benchmark.status === "error") {
@@ -180,7 +210,7 @@ function PriceBenchmark({ benchmark, row }) {
   if (benchmark.status === "insufficient") {
     return (
       <span className={css.benchmarkMuted}>
-        Недостатньо аналогів ({benchmark.contractCount} за {benchmark.months} міс.)
+        Немає аналогів за {benchmark.months} міс.
       </span>
     );
   }
@@ -209,7 +239,7 @@ function PriceBenchmark({ benchmark, row }) {
           {differenceLabel} на {formatPercentage(Math.abs(difference))}
         </span>
       ) : null}
-      <small>{benchmark.contractCount} договорів · {benchmark.months} міс.</small>
+      <small>{benchmark.contractCount} договорів · {benchmark.months} міс. · ДК + назва</small>
     </div>
   );
 }

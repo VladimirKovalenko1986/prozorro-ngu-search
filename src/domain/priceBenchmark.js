@@ -1,11 +1,81 @@
 import { normalizeText } from "../utils/text.js";
 
-export function getPriceBenchmarkTarget(row) {
+const GENERIC_PRODUCT_WORDS = new Set([
+  "або",
+  "каша",
+  "крупа",
+  "крупи",
+  "для",
+  "з",
+  "за",
+  "закупівля",
+  "комплект",
+  "лот",
+  "на",
+  "по",
+  "послуга",
+  "предмет",
+  "придбання",
+  "поставка",
+  "та",
+  "товар",
+  "у",
+]);
+
+function getProductName(procedure, row) {
+  return (row.specificationTitle || row.lotTitle || procedure.title || "").replace(
+    /^\d+\.\s*/,
+    "",
+  );
+}
+
+function getProductTokens(value) {
+  return normalizeText(value)
+    .split(" ")
+    .filter((token) => token.length > 1 && !GENERIC_PRODUCT_WORDS.has(token));
+}
+
+function getWordRoot(token) {
+  if (/^\d/.test(token)) return token;
+
+  return token.slice(0, Math.min(token.length, 4));
+}
+
+function getRequiredNumbers(value) {
+  return normalizeText(value).match(/\d+(?:[.,]\d+)?/g) || [];
+}
+
+function getNameSignature(value) {
+  const tokens = getProductTokens(value);
+  const roots = [...new Set(tokens.map(getWordRoot))];
+  const numbers = [...new Set(getRequiredNumbers(value))];
+
+  return {
+    numbers,
+    roots,
+  };
+}
+
+function isMatchingProductName(target, procedure, row) {
+  const candidate = getNameSignature(getProductName(procedure, row));
+
+  if (target.nameNumbers.some((number) => !candidate.numbers.includes(number))) {
+    return false;
+  }
+
+  const matchedRoots = target.nameRoots.filter((root) => candidate.roots.includes(root));
+  const requiredMatches = Math.max(1, Math.ceil(target.nameRoots.length * 0.6));
+
+  return matchedRoots.length >= requiredMatches;
+}
+
+export function getPriceBenchmarkTarget(procedure, row) {
   const classificationIds = [...new Set(row.classificationIds || [])].filter(Boolean);
   const unitKey = normalizeText(row.unitName);
   const currency = row.expectedCurrency || "UAH";
+  const nameSignature = getNameSignature(getProductName(procedure, row));
 
-  if (classificationIds.length !== 1 || !unitKey) {
+  if (classificationIds.length !== 1 || !unitKey || nameSignature.roots.length === 0) {
     return null;
   }
 
@@ -14,7 +84,9 @@ export function getPriceBenchmarkTarget(row) {
   return {
     currency,
     dkCode,
-    key: `${dkCode}|${unitKey}|${currency}`,
+    key: `${dkCode}|${unitKey}|${currency}|${nameSignature.roots.join(",")}|${nameSignature.numbers.join(",")}`,
+    nameNumbers: nameSignature.numbers,
+    nameRoots: nameSignature.roots,
     unitKey,
   };
 }
@@ -28,6 +100,7 @@ export function getPriceBenchmarkSample(procedure, row, target) {
     !row.classificationIds?.includes(target.dkCode) ||
     normalizeText(row.unitName) !== target.unitKey ||
     contractCurrency !== target.currency ||
+    !isMatchingProductName(target, procedure, row) ||
     !row.dateSigned ||
     !Number.isFinite(quantity) ||
     quantity <= 0 ||

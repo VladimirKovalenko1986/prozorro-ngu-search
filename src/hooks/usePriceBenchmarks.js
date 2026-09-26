@@ -15,7 +15,7 @@ import { fetchTenderSearchPage } from "../services/prozorroApi.js";
 import { wait } from "../utils/async.js";
 
 const BENCHMARK_PERIODS_MONTHS = [3, 6, 12];
-const BENCHMARK_MIN_CONTRACTS = 3;
+const BENCHMARK_MIN_CONTRACTS = 1;
 const BENCHMARK_MAX_PAGES = 8;
 const BENCHMARK_SEARCH_GRACE_DAYS = 45;
 const benchmarkCache = new Map();
@@ -25,7 +25,7 @@ function getTargets(procedures) {
 
   for (const procedure of procedures) {
     for (const row of procedure.rows) {
-      const target = getPriceBenchmarkTarget(row);
+      const target = getPriceBenchmarkTarget(procedure, row);
 
       if (!target) continue;
 
@@ -148,6 +148,7 @@ async function findPriceBenchmark(target, signal) {
 
 export function usePriceBenchmarks(procedures, enabled) {
   const [benchmarks, setBenchmarks] = useState({});
+  const [progress, setProgress] = useState({ completed: 0, total: 0 });
   const requestIdRef = useRef(0);
   const targets = useMemo(() => getTargets(procedures), [procedures]);
   const targetsKey = targets.map((target) => target.key).join(",");
@@ -159,6 +160,12 @@ export function usePriceBenchmarks(procedures, enabled) {
     const controller = new AbortController();
     const startTimeout = window.setTimeout(() => {
       requestIdRef.current = requestId;
+      const cachedTargetsCount = targets.filter((target) => benchmarkCache.has(target.key)).length;
+
+      setProgress({
+        completed: cachedTargetsCount,
+        total: targets.length,
+      });
       setBenchmarks((current) => {
         const next = { ...current };
 
@@ -174,6 +181,8 @@ export function usePriceBenchmarks(procedures, enabled) {
       });
 
       void (async () => {
+        let completed = cachedTargetsCount;
+
         for (const target of targets) {
           if (requestId !== requestIdRef.current || controller.signal.aborted) return;
 
@@ -196,6 +205,9 @@ export function usePriceBenchmarks(procedures, enabled) {
               },
             }));
           }
+
+          completed += 1;
+          setProgress({ completed, total: targets.length });
         }
       })();
     }, 0);
@@ -206,5 +218,8 @@ export function usePriceBenchmarks(procedures, enabled) {
     };
   }, [enabled, targets, targetsKey]);
 
-  return benchmarks;
+  return {
+    benchmarks,
+    progress: enabled ? progress : { completed: 0, total: 0 },
+  };
 }
