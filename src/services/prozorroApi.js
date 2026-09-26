@@ -64,13 +64,14 @@ async function fetchJson(url, options) {
   return response.json();
 }
 
-export async function fetchTenderSearchPage({ edrpou, edrpous, page, signal }) {
+export async function fetchTenderSearchPage({ cpv, edrpou, edrpous, page, signal }) {
   const params = new URLSearchParams();
   const buyerCodes = edrpous?.length ? edrpous : [edrpou];
 
   buyerCodes.filter(Boolean).forEach((buyerCode) => {
     params.append("buyer[]", buyerCode);
   });
+  if (cpv) params.append("cpv", cpv);
   params.append("page", String(page));
 
   return fetchJson(`${SITE_API_PREFIX}/search/tenders?${params}`, {

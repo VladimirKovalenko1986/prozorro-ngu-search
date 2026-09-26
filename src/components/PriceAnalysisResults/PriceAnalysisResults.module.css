@@ -119,6 +119,54 @@
   display: block;
 }
 
+.benchmarkCell {
+  min-width: 220px;
+}
+
+.benchmarkResult {
+  display: grid;
+  gap: 4px;
+}
+
+.benchmarkResult strong {
+  color: var(--text-color);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.benchmarkResult small,
+.benchmarkMuted {
+  color: var(--muted-text);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.benchmarkHigher,
+.benchmarkLower,
+.benchmarkNeutral {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.benchmarkHigher {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.benchmarkLower {
+  background: rgba(22, 163, 74, 0.13);
+  color: #15803d;
+}
+
+.benchmarkNeutral {
+  background: var(--soft-background);
+  color: var(--muted-text);
+}
+
 .subjectCell a {
   color: var(--accent-color);
   font-size: 13px;

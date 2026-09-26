@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useRef } from "react";
+import { getPriceBenchmarkTarget } from "../../domain/priceBenchmark.js";
+import { usePriceBenchmarks } from "../../hooks/usePriceBenchmarks.js";
 import { formatDate } from "../../utils/formatDate.js";
 import { formatMoney } from "../../utils/formatMoney.js";
 import { formatQuantity } from "../../utils/formatQuantity.js";
@@ -16,6 +18,7 @@ export default function PriceAnalysisResults({
 }) {
   const isInitialLoading = loading && procedures.length === 0;
   const nextBatchIndexRef = useRef(null);
+  const benchmarks = usePriceBenchmarks(procedures, !loading && procedures.length > 0);
 
   useEffect(() => {
     const nextBatchIndex = nextBatchIndexRef.current;
@@ -76,6 +79,7 @@ export default function PriceAnalysisResults({
                 <th>Кількість</th>
                 <th>Ціна за одиницю</th>
                 <th>Номер договору</th>
+                <th>Порівняння з договорами НГУ</th>
               </tr>
             </thead>
             <tbody>
@@ -84,6 +88,7 @@ export default function PriceAnalysisResults({
                   key={procedure.id}
                   procedure={procedure}
                   procedureIndex={procedureIndex}
+                  benchmarks={benchmarks}
                   showBuyerColumn={showBuyerColumn}
                 />
               ))}
@@ -109,7 +114,7 @@ export default function PriceAnalysisResults({
   );
 }
 
-function ProcedureRows({ procedure, procedureIndex, showBuyerColumn }) {
+function ProcedureRows({ benchmarks, procedure, procedureIndex, showBuyerColumn }) {
   return (
     <Fragment>
       {procedure.rows.map((row, rowIndex) => (
@@ -148,10 +153,76 @@ function ProcedureRows({ procedure, procedureIndex, showBuyerColumn }) {
           </td>
           <td>{formatMoney(row.expectedUnitPrice, row.expectedCurrency)}</td>
           <td>{row.contractNumber}</td>
+          <td className={css.benchmarkCell}>
+            <PriceBenchmark benchmark={benchmarks[getPriceBenchmarkTarget(row)?.key]} row={row} />
+          </td>
         </tr>
       ))}
     </Fragment>
   );
+}
+
+function PriceBenchmark({ benchmark, row }) {
+  const target = getPriceBenchmarkTarget(row);
+
+  if (!target) {
+    return <span className={css.benchmarkMuted}>Немає точного ДК або одиниці</span>;
+  }
+
+  if (!benchmark || benchmark.status === "loading") {
+    return <span className={css.benchmarkMuted}>Шукаю аналоги…</span>;
+  }
+
+  if (benchmark.status === "error") {
+    return <span className={css.benchmarkMuted}>Не вдалося отримати аналоги</span>;
+  }
+
+  if (benchmark.status === "insufficient") {
+    return (
+      <span className={css.benchmarkMuted}>
+        Недостатньо аналогів ({benchmark.contractCount} за {benchmark.months} міс.)
+      </span>
+    );
+  }
+
+  const difference = row.expectedUnitPrice && benchmark.averageUnitPrice
+    ? ((row.expectedUnitPrice - benchmark.averageUnitPrice) / benchmark.averageUnitPrice) * 100
+    : null;
+  const differenceClass = difference > 0
+    ? css.benchmarkHigher
+    : difference < 0
+      ? css.benchmarkLower
+      : css.benchmarkNeutral;
+  const differenceLabel = difference > 0
+    ? "Вище"
+    : difference < 0
+      ? "Нижче"
+      : "Без різниці";
+
+  return (
+    <div className={css.benchmarkResult}>
+      <strong>
+        Середня: {formatMoney(benchmark.averageUnitPrice, target.currency)} {getCurrencyLabel(target.currency)}/{row.unitName}
+      </strong>
+      {difference !== null ? (
+        <span className={differenceClass}>
+          {differenceLabel} на {formatPercentage(Math.abs(difference))}
+        </span>
+      ) : null}
+      <small>{benchmark.contractCount} договорів · {benchmark.months} міс.</small>
+    </div>
+  );
+}
+
+function getCurrencyLabel(currency) {
+  return currency === "UAH" ? "грн" : currency;
+}
+
+function formatPercentage(value) {
+  return new Intl.NumberFormat("uk-UA", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }).format(value) + "%";
 }
 
 function getLotLabel(row) {
