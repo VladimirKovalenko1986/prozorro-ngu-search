@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef } from "react";
+import { PRICE_ANALYSIS_PROCEDURES_PER_BATCH } from "../../constants/search.js";
 import { getPriceBenchmarkTarget } from "../../domain/priceBenchmark.js";
 import { usePriceBenchmarks } from "../../hooks/usePriceBenchmarks.js";
 import { formatDate } from "../../utils/formatDate.js";
@@ -127,7 +128,9 @@ export default function PriceAnalysisResults({
             type="button"
           >
             {loadingMore ? <span className={css.buttonSpinner} aria-hidden="true" /> : null}
-            {loadingMore ? "Завантажую ще 50…" : "Завантажити ще 50"}
+            {loadingMore
+              ? `Завантажую ще ${PRICE_ANALYSIS_PROCEDURES_PER_BATCH}…`
+              : `Завантажити ще ${PRICE_ANALYSIS_PROCEDURES_PER_BATCH}`}
           </button>
         </div>
       ) : null}
@@ -195,11 +198,27 @@ function PriceBenchmark({ benchmark, procedure, row }) {
   }
 
   if (!benchmark || benchmark.status === "loading") {
+    const checked = benchmark?.checked || 0;
+    const total = benchmark?.total || 0;
+    const percent = total ? Math.min(100, Math.round((checked / total) * 100)) : 0;
+
     return (
-      <span className={css.benchmarkLoading}>
-        <span className={css.benchmarkCellSpinner} aria-hidden="true" />
-        Шукаю аналоги…
-      </span>
+      <div className={css.benchmarkLoading}>
+        <span className={css.benchmarkLoadingTitle}>
+          <span className={css.benchmarkCellSpinner} aria-hidden="true" />
+          Шукаю аналоги{total ? ` · ${percent}%` : "…"}
+        </span>
+        {total ? (
+          <>
+            <span className={css.benchmarkLoadingDetails}>
+              Перевірено {checked} з {total} закупівель
+            </span>
+            <span className={css.benchmarkCellTrack} aria-label={`Перевірено ${percent}%`}>
+              <span style={{ width: `${percent}%` }} />
+            </span>
+          </>
+        ) : null}
+      </div>
     );
   }
 

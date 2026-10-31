@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BUYERS } from "../constants/buyers.js";
-import { TENDER_REQUEST_DELAY_MS } from "../constants/search.js";
+import {
+  PRICE_ANALYSIS_PROCEDURES_PER_BATCH,
+  TENDER_REQUEST_DELAY_MS,
+} from "../constants/search.js";
 import {
   buildProcedureForItem,
   getSearchItemProcedureDate,
 } from "../domain/prozorroRows.js";
 import { fetchTenderSearchPage } from "../services/prozorroApi.js";
 import { wait } from "../utils/async.js";
-
-const PROCEDURES_PER_BATCH = 50;
 
 function getBuyerCodes(buyer, edrpou) {
   if (buyer === "edrpou-search") {
@@ -68,7 +69,7 @@ export function usePriceAnalysisSearch({ buyer, edrpou }) {
 
     try {
       while (
-        pendingItemsRef.current.length < PROCEDURES_PER_BATCH &&
+        pendingItemsRef.current.length < PRICE_ANALYSIS_PROCEDURES_PER_BATCH &&
         (totalPagesRef.current === null || nextPageRef.current <= totalPagesRef.current)
       ) {
         const page = nextPageRef.current;
@@ -103,7 +104,10 @@ export function usePriceAnalysisSearch({ buyer, edrpou }) {
         if (rows.length === 0) break;
       }
 
-      const batch = pendingItemsRef.current.splice(0, PROCEDURES_PER_BATCH);
+      const batch = pendingItemsRef.current.splice(
+        0,
+        PRICE_ANALYSIS_PROCEDURES_PER_BATCH,
+      );
       const baseProcedures = replace ? [] : proceduresRef.current;
       const loadedProcedures = [];
 

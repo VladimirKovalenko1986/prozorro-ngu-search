@@ -65,11 +65,12 @@ function hasReachedPeriodBoundary(items, months, now) {
   return procedureDates.some((date) => date < cutoff);
 }
 
-async function findPriceBenchmark(target, signal) {
+async function findPriceBenchmark(target, signal, onProgress) {
   const now = new Date();
   const searchCutoff = getSearchCutoff(now);
   const seenTenderIds = new Set();
   const samples = [];
+  let checkedItems = 0;
 
   for (let page = 1; page <= BENCHMARK_MAX_PAGES; page += 1) {
     const json = await fetchTenderSearchPage({
@@ -79,6 +80,12 @@ async function findPriceBenchmark(target, signal) {
       signal,
     });
     const items = json.data || [];
+    const pageSize = json.per_page || items.length || 1;
+    const totalItems = Number(json.total) || pageSize * BENCHMARK_MAX_PAGES;
+
+    const plannedItems = Math.min(totalItems, pageSize * BENCHMARK_MAX_PAGES);
+    onProgress({ checked: checkedItems, total: plannedItems });
+
     const pageReachedFinalBoundary = items.some((item) => {
       const procedureDate = getSearchItemProcedureDate(item);
 
@@ -94,6 +101,8 @@ async function findPriceBenchmark(target, signal) {
         target.excludedTenderIds.has(item.tenderID) ||
         (procedureDate && new Date(procedureDate) < searchCutoff)
       ) {
+        checkedItems += 1;
+        onProgress({ checked: checkedItems, total: plannedItems });
         continue;
       }
 
@@ -117,6 +126,8 @@ async function findPriceBenchmark(target, signal) {
         return { status: "ready", ...immediateBenchmark };
       }
 
+      checkedItems += 1;
+      onProgress({ checked: checkedItems, total: plannedItems });
       await wait(TENDER_REQUEST_DELAY_MS, signal);
     }
 
@@ -173,7 +184,7 @@ export function usePriceBenchmarks(procedures, enabled) {
           if (benchmarkCache.has(target.key)) {
             next[target.key] = benchmarkCache.get(target.key);
           } else if (!next[target.key]) {
-            next[target.key] = { status: "loading" };
+            next[target.key] = { status: "loading", checked: 0, total: 0 };
           }
         });
 
@@ -189,7 +200,21 @@ export function usePriceBenchmarks(procedures, enabled) {
           if (benchmarkCache.has(target.key)) continue;
 
           try {
-            const benchmark = await findPriceBenchmark(target, controller.signal);
+            const benchmark = await findPriceBenchmark(
+              target,
+              controller.signal,
+              (targetProgress) => {
+                if (requestId !== requestIdRef.current || controller.signal.aborted) return;
+
+                setBenchmarks((current) => ({
+                  ...current,
+                  [target.key]: {
+                    status: "loading",
+                    ...targetProgress,
+                  },
+                }));
+              },
+            );
 
             if (requestId !== requestIdRef.current || controller.signal.aborted) return;
 
