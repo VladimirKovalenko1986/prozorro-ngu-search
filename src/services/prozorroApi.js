@@ -64,13 +64,25 @@ async function fetchJson(url, options) {
   return response.json();
 }
 
-export async function fetchTenderSearchPage({ cpv, edrpou, edrpous, page, signal }) {
+// Сервер приймає кілька статусів і кодів ДК (cpvCodes) в одному запиті.
+// Коди він порівнює точно, а не за префіксом.
+export async function fetchTenderSearchPage({
+  cpv,
+  cpvCodes = [],
+  edrpou,
+  edrpous,
+  page,
+  signal,
+  statuses = [],
+}) {
   const params = new URLSearchParams();
   const buyerCodes = edrpous?.length ? edrpous : [edrpou];
 
   buyerCodes.filter(Boolean).forEach((buyerCode) => {
     params.append("buyer[]", buyerCode);
   });
+  statuses.forEach((status) => params.append("status[]", status));
+  cpvCodes.forEach((code) => params.append("cpv[]", code));
   if (cpv) params.append("cpv", cpv);
   params.append("page", String(page));
 

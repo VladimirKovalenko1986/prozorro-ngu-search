@@ -1,3 +1,4 @@
+import { getDkCodePrefix } from "../constants/dk.js";
 import { toNumber } from "../utils/numbers.js";
 import {
   buildProcedureResult,
@@ -14,6 +15,21 @@ import {
 
 const CLOSED_TENDER_STATUSES = new Set(["complete", "cancelled", "unsuccessful"]);
 const CONCLUDED_CONTRACT_STATUSES = new Set(["active", "terminated"]);
+const MAX_SERVER_CPV_CODES = 50;
+
+// Статуси процедур "в процесі" для фільтра пошукового API Prozorro.
+export const CASE_SEARCH_STATUSES = [
+  "active.enquiries",
+  "active.tendering",
+  "active.pre-qualification",
+  "active.pre-qualification.stand-still",
+  "active.auction",
+  "active.qualification",
+  "active.qualification.stand-still",
+  "active.awarded",
+  "active.stage2.pending",
+  "active.stage2.waiting",
+];
 
 export function getCaseSearchRange(today = new Date()) {
   const year = today.getFullYear();
@@ -27,6 +43,20 @@ export function isTenderInProgress(status) {
   if (!status) return true;
 
   return !CLOSED_TENDER_STATUSES.has(status) && !status.startsWith("draft");
+}
+
+// Сервер порівнює коди ДК точно, тому вибраний код розгортаємо на всі вкладені.
+// Якщо кодів забагато для адреси запиту, повертаємо [] і фільтруємо лише локально.
+export function getServerCpvCodes(selectedDkCodes, catalog) {
+  const codes = new Set();
+
+  for (const { code } of selectedDkCodes) {
+    const nested = catalog.getCodesByPrefix(getDkCodePrefix(code));
+
+    (nested.length > 0 ? nested : [code]).forEach((item) => codes.add(item));
+  }
+
+  return codes.size <= MAX_SERVER_CPV_CODES ? [...codes] : [];
 }
 
 function isLotInProgress(details, lot) {

@@ -12,6 +12,12 @@ export function loadDkCatalog() {
       }));
 
       return {
+        getCodesByPrefix(prefix) {
+          return options
+            .filter((option) => option.code.startsWith(prefix))
+            .map((option) => option.code);
+        },
+
         getSuggestions(query, limit = 50) {
           const trimmedQuery = query.trim();
           const digitQuery = trimmedQuery.replace(/\D/g, "");

@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { fetchTenderSearchPage } from "../services/prozorroApi.js";
 import { BUYERS } from "../constants/buyers.js";
 import { getDkCodePrefix, normalizeDkCode } from "../constants/dk.js";
+import { loadDkCatalog } from "../constants/dkCatalog.js";
 import { ADD_ROW_ANIMATION_MS, MAX_SEARCH_PAGES, TENDER_REQUEST_DELAY_MS } from "../constants/search.js";
 import { STORAGE_KEYS } from "../constants/storage.js";
 import { FILTER_COLUMNS, TABLE_COLUMNS } from "../constants/table.js";
@@ -10,9 +11,11 @@ import { readStoredChecks, writeStoredChecks } from "../utils/storageChecks.js";
 import { normalizeText } from "../utils/text.js";
 import { wait } from "../utils/async.js";
 import {
+  CASE_SEARCH_STATUSES,
   buildCaseProcedureForItem,
   buildCaseProcedureResult,
   getCaseSearchRange,
+  getServerCpvCodes,
   isTenderInProgress,
 } from "../domain/caseRows.js";
 import {
@@ -357,7 +360,11 @@ export function useProzorroSearch() {
       return;
     }
 
-    const controller = startSearch(buyer.edrpous.length);
+    // КЕС шукає всіх замовників одним запитом: сервер сам об'єднує їхні процедури.
+    const searchGroups = isCaseSearch
+      ? [buyer.edrpous]
+      : buyer.edrpous.map((edrpou) => [edrpou]);
+    const controller = startSearch(searchGroups.length);
     const { signal } = controller;
     setResults([]);
     setResultsAreCase(isCaseSearch);
@@ -369,15 +376,31 @@ export function useProzorroSearch() {
     const foundTenderIds = new Set();
 
     try {
-      for (const [edrpouIndex, edrpou] of buyer.edrpous.entries()) {
+      let cpvCodes = [];
+
+      // Без довідника просто шукаємо без серверного фільтра коду: локальний фільтр лишається.
+      if (isCaseSearch && activeDkCodes.length > 0) {
+        try {
+          cpvCodes = getServerCpvCodes(activeDkCodes, await loadDkCatalog());
+        } catch {
+          cpvCodes = [];
+        }
+      }
+
+      for (const [groupIndex, group] of searchGroups.entries()) {
+        const groupLabel = group.length > 1
+          ? `Усі ЄДРПОУ (${group.length})`
+          : `ЄДРПОУ ${groupIndex + 1} з ${searchGroups.length}: ${group[0]}`;
         let page = 1;
         let totalPages = 1;
 
         while (page <= totalPages && page <= MAX_SEARCH_PAGES) {
           const json = await fetchTenderSearchPage({
-            edrpou,
+            cpvCodes,
+            edrpous: group,
             page,
             signal,
+            statuses: isCaseSearch ? CASE_SEARCH_STATUSES : [],
           });
           const rows = json.data || [];
           const edrpouTotal = json.total || rows.length;
@@ -388,13 +411,13 @@ export function useProzorroSearch() {
           totalPages = Math.max(1, Math.ceil(edrpouTotal / (json.per_page || 20)));
 
           updateSearchProgress({
-            buyerIndex: edrpouIndex + 1,
+            buyerIndex: groupIndex + 1,
             currentPage: page,
             totalPages,
           });
 
           setStatus(
-            `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Перевіряю сторінку ${page} з ${totalPages}. Уже показано: ${found.length}`,
+            `${groupLabel}. Перевіряю сторінку ${page} з ${totalPages}. Уже показано: ${found.length}`,
           );
 
           if (
@@ -433,7 +456,7 @@ export function useProzorroSearch() {
             }
 
             setStatus(
-              `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Уже показано: ${found.length}`,
+              `${groupLabel}. Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Уже показано: ${found.length}`,
             );
 
             let procedureResult;
