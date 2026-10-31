@@ -1,0 +1,13 @@
+.table {
+  min-width: 720px;
+}
+
+.table th {
+  height: auto;
+}
+
+.table td a {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}

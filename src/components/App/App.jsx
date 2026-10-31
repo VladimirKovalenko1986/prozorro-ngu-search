@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BUYERS } from "../../constants/buyers.js";
 import { STORAGE_KEYS } from "../../constants/storage.js";
+import CaseResultsTable from "../CaseResultsTable/CaseResultsTable.jsx";
 import FilterSummary from "../FilterSummary/FilterSummary.jsx";
 import PriceAnalysisResults from "../PriceAnalysisResults/PriceAnalysisResults.jsx";
 import ResultsTable from "../ResultsTable/ResultsTable.jsx";
@@ -80,6 +81,7 @@ function SearchPage({ search }) {
         dateTo={search.dateTo}
         disabled={search.loading}
         dkCode={search.dkCode}
+        findCase={search.findCase}
         selectedDkCodes={search.selectedDkCodes}
         onBuyerChange={search.handleBuyerChange}
         onContractNumberAdd={search.addContractNumber}
@@ -93,9 +95,11 @@ function SearchPage({ search }) {
         onDkCodeChange={search.setDkCode}
         onDkCodeClear={search.clearDkCodes}
         onDkCodeRemove={search.removeDkCode}
+        onFindCaseChange={search.setFindCase}
         onSearch={search.handleSearch}
         onStopSearch={search.handleStopSearch}
         onStorageImport={search.handleStorageImport}
+        resultsAreCase={search.resultsAreCase}
         searchFinishedMessage={search.searchFinishedMessage}
         searchProgress={search.searchProgress}
         showBuyerColumn={search.showBuyerColumn}
@@ -104,15 +108,22 @@ function SearchPage({ search }) {
         tableResults={search.filteredResults}
       />
 
-      <FilterSummary
-        disabled={search.loading}
-        filteredCount={search.filteredResults.length}
-        hasActiveFilters={search.hasActiveFilters}
-        onClear={search.clearFilters}
-        totalCount={search.results.length}
-      />
+      {search.resultsAreCase ? null : (
+        <FilterSummary
+          disabled={search.loading}
+          filteredCount={search.filteredResults.length}
+          hasActiveFilters={search.hasActiveFilters}
+          onClear={search.clearFilters}
+          totalCount={search.results.length}
+        />
+      )}
 
-      {search.results.length === 0 ? (
+      {search.resultsAreCase ? (
+        <CaseResultsTable
+          results={search.results}
+          showBuyerColumn={search.showBuyerColumn}
+        />
+      ) : search.results.length === 0 ? (
         <ResultsTable
           checkedLots={search.checkedLots}
           checkedProcedures={search.checkedProcedures}

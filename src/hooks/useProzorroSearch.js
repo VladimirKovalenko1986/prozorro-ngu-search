@@ -10,6 +10,12 @@ import { readStoredChecks, writeStoredChecks } from "../utils/storageChecks.js";
 import { normalizeText } from "../utils/text.js";
 import { wait } from "../utils/async.js";
 import {
+  buildCaseProcedureForItem,
+  buildCaseProcedureResult,
+  getCaseSearchRange,
+  isTenderInProgress,
+} from "../domain/caseRows.js";
+import {
   buildFallbackDetails,
   buildFilterOptions,
   buildLotRow,
@@ -38,6 +44,8 @@ export function useProzorroSearch() {
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
   const [dateTo, setDateTo] = useState(getDefaultDateTo);
   const [results, setResults] = useState([]);
+  const [findCase, setFindCase] = useState(false);
+  const [resultsAreCase, setResultsAreCase] = useState(false);
   const [status, setStatus] = useState("Готово до пошуку");
   const [loading, setLoading] = useState(false);
   const [checkedProcedures, setCheckedProcedures] = useState(() =>
@@ -73,9 +81,10 @@ export function useProzorroSearch() {
       ),
     [showBuyerColumn],
   );
+  // Фільтри таблиці та номери договорів стосуються лише звичайного вигляду.
   const filteredBySelects = useMemo(
-    () => filterResults(results, filters),
-    [results, filters],
+    () => (resultsAreCase ? results : filterResults(results, filters)),
+    [results, filters, resultsAreCase],
   );
   const activeContractSearches = useMemo(() => {
     const selectedValues = selectedContractNumbers.map((item) => item.value);
@@ -91,19 +100,24 @@ export function useProzorroSearch() {
     return [...selectedValues, contractSearch];
   }, [contractSearch, selectedContractNumbers]);
   const filteredResults = useMemo(
-    () => filterResultsByContractNumber(filteredBySelects, activeContractSearches),
-    [activeContractSearches, filteredBySelects],
+    () =>
+      resultsAreCase
+        ? filteredBySelects
+        : filterResultsByContractNumber(filteredBySelects, activeContractSearches),
+    [activeContractSearches, filteredBySelects, resultsAreCase],
   );
   const filterOptions = useMemo(
     () =>
-      filterColumns.reduce(
-        (options, column) => ({
-          ...options,
-          [column.key]: buildFilterOptions(results, column.key),
-        }),
-        {},
-      ),
-    [results, filterColumns],
+      resultsAreCase
+        ? {}
+        : filterColumns.reduce(
+            (options, column) => ({
+              ...options,
+              [column.key]: buildFilterOptions(results, column.key),
+            }),
+            {},
+          ),
+    [results, filterColumns, resultsAreCase],
   );
   const hasActiveFilters = Object.values(filters).some(
     (values) => values.length > 0,
@@ -327,7 +341,10 @@ export function useProzorroSearch() {
     event.preventDefault();
 
     const buyer = BUYERS.find((item) => item.label === selectedBuyer);
-    const searchRange = normalizeDateRange(dateFrom, dateTo);
+    const isCaseSearch = findCase;
+    const searchRange = isCaseSearch
+      ? getCaseSearchRange()
+      : normalizeDateRange(dateFrom, dateTo);
 
     if (hasInvalidDkCode()) return;
 
@@ -343,6 +360,7 @@ export function useProzorroSearch() {
     const controller = startSearch(buyer.edrpous.length);
     const { signal } = controller;
     setResults([]);
+    setResultsAreCase(isCaseSearch);
     setAddingProcedureTitle("");
     setRecentlyAddedProcedureId("");
     setSearchFinishedMessage("");
@@ -409,6 +427,11 @@ export function useProzorroSearch() {
               continue;
             }
 
+            // Закриті процедури відсікаємо за статусом зі списку, не завантажуючи деталі.
+            if (isCaseSearch && !isTenderInProgress(item.status)) {
+              continue;
+            }
+
             setStatus(
               `ЄДРПОУ ${edrpouIndex + 1} з ${buyer.edrpous.length}: ${edrpou}. Обробляю процедуру ${itemIndex + 1} з ${rows.length}. Уже показано: ${found.length}`,
             );
@@ -424,35 +447,41 @@ export function useProzorroSearch() {
                 continue;
               }
 
-              procedureResult = await buildProcedureForItem(
-                item,
-                getDkRowMatcher,
-                details,
-                signal,
-              );
+              procedureResult = isCaseSearch
+                ? await buildCaseProcedureForItem(item, getDkRowMatcher, details, signal)
+                : await buildProcedureForItem(item, getDkRowMatcher, details, signal);
             } catch (error) {
               if (signal.aborted) throw error;
 
               const fallbackDetails = buildFallbackDetails(item);
-              const fallbackRows = buildLotRow(
-                fallbackDetails,
-                null,
-                0,
-                1,
-                null,
-                null,
-                null,
-              ).filter(getDkRowMatcher);
 
-              if (fallbackRows.length === 0) {
-                continue;
+              if (isCaseSearch) {
+                procedureResult = buildCaseProcedureResult(
+                  fallbackDetails,
+                  item,
+                  getDkRowMatcher,
+                );
+              } else {
+                const fallbackRows = buildLotRow(
+                  fallbackDetails,
+                  null,
+                  0,
+                  1,
+                  null,
+                  null,
+                  null,
+                ).filter(getDkRowMatcher);
+
+                if (fallbackRows.length === 0) {
+                  continue;
+                }
+
+                procedureResult = buildProcedureResult(
+                  fallbackDetails,
+                  item,
+                  fallbackRows,
+                );
               }
-
-              procedureResult = buildProcedureResult(
-                fallbackDetails,
-                item,
-                fallbackRows,
-              );
             }
 
             if (!procedureResult) {
@@ -488,7 +517,9 @@ export function useProzorroSearch() {
       }
 
       setStatus(
-        `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${activeDkCodes.length ? `. ДК-кодів: ${activeDkCodes.length}` : ""}`,
+        isCaseSearch
+          ? `Готово. КЕС: процедур у процесі без договорів ${found.length}. Період: весь ${searchRange.year} рік${activeDkCodes.length ? `. ДК-кодів: ${activeDkCodes.length}` : ""}`
+          : `Готово. Показано процедур: ${found.length}. Перевірено за датою оприлюднення ${searchRange.dateFrom} - ${searchRange.dateTo}${activeDkCodes.length ? `. ДК-кодів: ${activeDkCodes.length}` : ""}`,
       );
       setSearchFinishedMessage(
         `Пошук завершено. Усе знайдено: ${found.length} процедур.`,
@@ -535,6 +566,7 @@ export function useProzorroSearch() {
     const controller = startSearch(buyer.edrpous.length);
     const { signal } = controller;
     setResults([]);
+    setResultsAreCase(false);
     setFilters({});
     setAddingProcedureTitle("");
     setRecentlyAddedProcedureId("");
@@ -695,6 +727,7 @@ export function useProzorroSearch() {
     filterOptions,
     filteredResults,
     filters,
+    findCase,
     handleBuyerChange,
     handleContractRemoteSearch,
     handleSearch,
@@ -704,6 +737,7 @@ export function useProzorroSearch() {
     loading,
     recentlyAddedProcedureId,
     results,
+    resultsAreCase,
     removeDkCode,
     removeContractNumber,
     searchFinishedMessage,
@@ -715,6 +749,7 @@ export function useProzorroSearch() {
     setDateFrom,
     setDateTo,
     setDkCode,
+    setFindCase,
     showBuyerColumn,
     status,
     tableColumns,

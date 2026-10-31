@@ -933,3 +933,54 @@ select.control {
     transform: translateY(-5px) scale(0.992);
   }
 }
+
+.caseToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  border: 1px solid var(--control-border);
+  border-radius: 13px;
+  background: var(--input-background);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.caseToggle:hover {
+  border-color: var(--input-hover-border);
+}
+
+.caseToggleActive {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.caseToggle input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.caseToggle > span {
+  min-width: 0;
+}
+
+.caseToggle strong {
+  display: block;
+  color: var(--text-color);
+  font-size: 16px;
+}
+
+.caseToggle > span > span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-text);
+  font-size: 13px;
+  line-height: 1.45;
+}

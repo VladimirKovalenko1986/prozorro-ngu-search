@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUYERS } from "../../constants/buyers.js";
 import { loadDkCatalog } from "../../constants/dkCatalog.js";
 import { normalizeDkCode } from "../../constants/dk.js";
+import { getCaseSearchRange } from "../../domain/caseRows.js";
 import { normalizeText } from "../../utils/text.js";
 import ExportExcelButton from "../ExportExcelButton/ExportExcelButton.jsx";
 import StorageTransferButtons from "../StorageTransferButtons/StorageTransferButtons.jsx";
@@ -16,6 +17,7 @@ export default function SearchPanel({
   dateTo,
   disabled,
   dkCode,
+  findCase,
   selectedDkCodes,
   onBuyerChange,
   onContractNumberAdd,
@@ -29,9 +31,11 @@ export default function SearchPanel({
   onDkCodeChange,
   onDkCodeClear,
   onDkCodeRemove,
+  onFindCaseChange,
   onSearch,
   onStopSearch,
   onStorageImport,
+  resultsAreCase,
   searchFinishedMessage,
   searchProgress,
   showBuyerColumn,
@@ -71,6 +75,7 @@ export default function SearchPanel({
               З дати
               <input
                 className={css.control}
+                disabled={findCase}
                 type="date"
                 value={dateFrom}
                 onChange={(event) => onDateFromChange(event.target.value)}
@@ -81,6 +86,7 @@ export default function SearchPanel({
               По дату
               <input
                 className={css.control}
+                disabled={findCase}
                 type="date"
                 value={dateTo}
                 onChange={(event) => onDateToChange(event.target.value)}
@@ -92,6 +98,22 @@ export default function SearchPanel({
               <span aria-hidden="true" className={css.buttonArrow}>→</span>
             </button>
           </div>
+
+          <label className={`${css.caseToggle} ${findCase ? css.caseToggleActive : ""}`}>
+            <input
+              checked={findCase}
+              disabled={disabled}
+              onChange={(event) => onFindCaseChange(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              <strong>КЕС</strong>
+              <span>
+                Лише процедури в процесі, без укладених договорів. Період не
+                враховується: пошук за весь {getCaseSearchRange().year} рік.
+              </span>
+            </span>
+          </label>
 
           <DkMultiSelect
             disabled={disabled}
@@ -109,6 +131,7 @@ export default function SearchPanel({
               dateFrom={dateFrom}
               dateTo={dateTo}
               disabled={disabled}
+              caseMode={resultsAreCase}
               results={tableResults}
               showBuyerColumn={showBuyerColumn}
             />
@@ -131,7 +154,7 @@ export default function SearchPanel({
           </div>
 
           <ContractMultiSelect
-            disabled={disabled}
+            disabled={disabled || findCase}
             onAdd={onContractNumberAdd}
             onClear={onContractNumbersClear}
             onRemove={onContractNumberRemove}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flattenCaseResults } from "../../domain/caseRows.js";
 import { formatDate } from "../../utils/formatDate.js";
 import { createXlsxFile } from "../../utils/xlsx.js";
 import css from "./ExportExcelButton.module.css";
@@ -22,6 +23,17 @@ function getColumns(showBuyerColumn) {
     "Статус процедури",
     "Статус договору",
     "Статус Award",
+  ];
+}
+
+function getCaseColumns(showBuyerColumn) {
+  return [
+    "Дата",
+    ...(showBuyerColumn ? ["Військова частина"] : []),
+    "Найменування",
+    "Очікувана вартість",
+    "Кількість",
+    "Одиниця виміру",
   ];
 }
 
@@ -90,7 +102,28 @@ function buildExcelRows(results, showBuyerColumn) {
   );
 }
 
-function buildFileName({ buyer, dateFrom, dateTo }) {
+function buildCaseExcelRows(results, showBuyerColumn) {
+  return flattenCaseResults(results).map((row) => [
+    textCell(formatDate(row.procedureDate)),
+    ...(showBuyerColumn ? [textCell(row.buyerUnit)] : []),
+    {
+      type: "link",
+      url: `https://prozorro.gov.ua/tender/${row.tenderID}`,
+      value: row.name ?? "",
+    },
+    numberCell(row.expectedAmount),
+    numberCell(row.quantity, "#,##0"),
+    textCell(row.unitName),
+  ]);
+}
+
+function buildFileName({ buyer, caseMode, dateFrom, dateTo }) {
+  if (caseMode) {
+    return `prozorro-case-${buyer}-${new Date().getFullYear()}.xlsx`
+      .replaceAll(" ", "-")
+      .toLowerCase();
+  }
+
   return `prozorro-${buyer}-${dateFrom}-${dateTo}.xlsx`
     .replaceAll(" ", "-")
     .toLowerCase();
@@ -98,6 +131,7 @@ function buildFileName({ buyer, dateFrom, dateTo }) {
 
 export default function ExportExcelButton({
   buyer,
+  caseMode,
   dateFrom,
   dateTo,
   disabled,
@@ -111,8 +145,10 @@ export default function ExportExcelButton({
 
     try {
       const file = await createXlsxFile({
-        columns: getColumns(showBuyerColumn),
-        rows: buildExcelRows(results, showBuyerColumn),
+        columns: caseMode ? getCaseColumns(showBuyerColumn) : getColumns(showBuyerColumn),
+        rows: caseMode
+          ? buildCaseExcelRows(results, showBuyerColumn)
+          : buildExcelRows(results, showBuyerColumn),
       });
       const blob = new Blob([file], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -121,7 +157,7 @@ export default function ExportExcelButton({
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = buildFileName({ buyer, dateFrom, dateTo });
+      link.download = buildFileName({ buyer, caseMode, dateFrom, dateTo });
       document.body.append(link);
       link.click();
       link.remove();
